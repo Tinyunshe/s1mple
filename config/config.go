@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"s1mple/auth"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,10 +12,15 @@ type Config struct {
 	ReleaseConfluenceDocument `yaml:"releaseConfluenceDocument"`
 }
 
+type ConfluenceUser struct {
+	Username string `json:"username"`
+	Token    string `json:"token"`
+}
+
 type ReleaseConfluenceDocument struct {
-	ConfluenceUrl  string                `yaml:"confluenceUrl"`
-	GoTemplatePath string                `yaml:"goTemplatePath"`
-	Parts          []auth.ConfluenceUser `yaml:"parts"`
+	ConfluenceUrl  string           `yaml:"confluenceUrl"`
+	GoTemplatePath string           `yaml:"goTemplatePath"`
+	Parts          []ConfluenceUser `yaml:"parts"`
 }
 
 func NewConfig() (*Config, error) {
