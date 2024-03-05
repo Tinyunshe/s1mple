@@ -63,9 +63,8 @@ func (d *Document) release(documentHtmlContent string) error {
 
 	// 声明发布到confluence请求的更多数据
 	url := d.Config.ConfluenceUrl + "/rest/api/content"
-	method := "POST"
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
+	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
@@ -80,7 +79,6 @@ func (d *Document) release(documentHtmlContent string) error {
 
 	resbody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(err)
 		return fmt.Errorf(err.Error())
 	}
 	fmt.Println(string(resbody))
@@ -154,26 +152,28 @@ func newDocument(r *http.Request, config *config.Config) (*Document, error) {
 
 // 发布confluence文档入口
 func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	
 	defer r.Body.Close()
 
 	doc, err := newDocument(r, config)
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, "Error decoding JSON", http.StatusBadRequest)
 		return
 	}
 
 	documentHtmlContent, err := doc.render()
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, "Error render doc", http.StatusBadRequest)
 		return
 	}
 
 	err = doc.release(documentHtmlContent)
 	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Error render doc", http.StatusBadRequest)
+		http.Error(w, "Error release doc", http.StatusBadRequest)
 		return
 	}
 
