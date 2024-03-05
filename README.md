@@ -10,6 +10,8 @@
 
 6、考虑是否要发布到空间主页面（比如wushuting的主页面），还是就在顶级页面
 
+7、服务端鉴权
+
 编译：
 
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o s1mple
