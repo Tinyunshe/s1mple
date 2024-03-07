@@ -13,14 +13,15 @@ import (
 )
 
 type Document struct {
-	Id       string         `json:"id"`
-	Jira     string         `json:"jira"`
-	Version  string         `json:"version"`
-	Assignee string         `json:"assignee"`
-	Subject  string         `json:"subject"`
-	Content  string         `json:"content"`
-	Comments string         `json:"comments"`
-	Config   *config.Config `json:",omitempty"`
+	CloudId       string         `json:"cloudId"`
+	Jira          string         `json:"jira"`
+	Version       string         `json:"version"`
+	AssigneeEmail string         `json:"assignee_email"`
+	Assignee      string         `json:"assignee,omitempty"`
+	Subject       string         `json:"subject"`
+	Content       string         `json:"content"`
+	Comments      string         `json:"comments"`
+	Config        *config.Config `json:",omitempty"`
 }
 
 // 将Document中的数据渲染到故障文档模板中,返回的是html格式的大字符串,可理解为文档
@@ -56,7 +57,7 @@ func (d *Document) release(documentHtmlContent string) error {
 	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
 	token := ""
 	for _, v := range d.Config.ConfluenceSpec.Parts {
-		if v.Username == d.Assignee {
+		if v.Username == d.AssigneeEmail {
 			token = v.Token
 		}
 	}
@@ -85,26 +86,26 @@ func (d *Document) release(documentHtmlContent string) error {
 	return nil
 }
 
+// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
+func (d *Document) fixAssignee() string {
+	return fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
+}
+
 // 由于html格式字符串无法直接传到json中,需要创建对象去构造,并返回post请求需要的reader
 func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Reader, error) {
-	// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
-	fixNameFunc := func() string {
-		return fmt.Sprintf("~" + strings.Split(d.Assignee, "@")[0])
-	}
-
 	/*
 		body 示例
-			{
-			    "type": "page",
-			    "title": "hahaha",
-			    "space": {"key": "~stwu"},
-			    "body": {
-			        "storage": {
-			            "value": "",
-			            "representation": "storage"
-			        }
-			    }
-			}
+				{
+				    "type": "page",
+				    "title": "hahaha",
+				    "space": {"key": "~stwu"},
+				    "body": {
+				        "storage": {
+				            "value": "",
+				            "representation": "storage"
+				        }
+				    }
+				}
 	*/
 	// 创建符合body json的匿名结构体传入数据
 	crb := &struct {
@@ -120,11 +121,11 @@ func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Re
 			} `json:"storage"`
 		} `json:"body"`
 	}{
-		Title: fmt.Sprintf(d.Id + "-" + d.Subject),
+		Title: fmt.Sprintf(d.CloudId + "-" + d.Subject),
 		Type:  "page",
 		Space: struct {
 			Key string "json:\"key\""
-		}{fixNameFunc()},
+		}{"~" + d.Assignee},
 		Body: struct {
 			Storage struct {
 				Value          string "json:\"value\""
@@ -153,6 +154,9 @@ func newDocument(r *http.Request, config *config.Config) (*Document, error) {
 		return nil, fmt.Errorf(err.Error())
 	}
 
+	// 获取正确的Assignee名称
+	d.Assignee = d.fixAssignee()
+
 	// 将config传到document结构体中
 	d.Config = config
 	return d, nil
@@ -160,12 +164,12 @@ func newDocument(r *http.Request, config *config.Config) (*Document, error) {
 
 // 发布confluence文档入口
 func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config) {
+	defer r.Body.Close()
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	defer r.Body.Close()
 
 	doc, err := newDocument(r, config)
 	if err != nil {

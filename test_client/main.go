@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	payload := strings.NewReader(`{"id":"1","jira":"http://xxx","assignee":"huiyang1@alauda.io","subject":"docker异常","content":"docker异常怀疑机器导致","comments":"1、排查与机器有关"}`)
+	payload := strings.NewReader(`{"id":"1","jira":"http://xxx","assignee":"stwu@alauda.io","subject":"docker异常","content":"docker异常怀疑机器导致","comments":"1、排查与机器有关"}`)
 	url := "http://127.0.0.1:8080/release_confluence_document"
 	req, _ := http.NewRequest(http.MethodPost, url, payload)
 	req.Header.Add("Content-Type", "application/json")

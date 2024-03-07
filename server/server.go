@@ -41,4 +41,5 @@ func (s *Server) Run() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	fmt.Println("Server start success")
 }

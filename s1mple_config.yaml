@@ -1,9 +1,10 @@
 releaseConfluenceDocument:
   gotemplatePath: "../doc_go_template.txt"
   confluenceSpec:
-    url: "https://confluence.alauda.cn"
+    url: "http://192.168.143.145:31871"
     parts:
     - username: stwu@alauda.io
-      token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
+      #token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
+      token: "Mzg1NzUzMTIyMDUyOtBLEwsxwiNOECT3MgzDiGypYeYq"
     - username: huiyang1@alauda.io
       token: "NDE5NTI0ODAxMTMzOvFj/Fn/lSiKARc7aUslzB+ZfH5W"
