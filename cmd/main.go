@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"s1mple/config"
-	serve "s1mple/server"
+	"s1mple/server"
 )
 
 func main() {
@@ -14,6 +14,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	app := serve.Server{Config: config}
+	app := server.Server{Config: config}
 	app.Run()
 }

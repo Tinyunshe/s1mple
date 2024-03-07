@@ -9,18 +9,29 @@ import (
 )
 
 type Config struct {
+	// 发布confluence文档功能配置
 	ReleaseConfluenceDocument `yaml:"releaseConfluenceDocument"`
 }
 
-type ConfluenceUser struct {
-	Username string `json:"username"`
-	Token    string `json:"token"`
+type ReleaseConfluenceDocument struct {
+	// 故障模版gotemplate的文件位置
+	GotemplatePath string `yaml:"gotemplatePath"`
+	// 关于confluence的配置
+	ConfluenceSpec ConfluenceSpec `yaml:"confluenceSpec"`
 }
 
-type ReleaseConfluenceDocument struct {
-	ConfluenceUrl  string           `yaml:"confluenceUrl"`
-	GotemplatePath string           `yaml:"gotemplatePath"`
-	Parts          []ConfluenceUser `yaml:"parts"`
+type ConfluenceSpec struct {
+	// confluence发布文档时对应的成员
+	Parts []ConfluenceUser `yaml:"parts"`
+	// confluence访问地址，http://xxx
+	ConfluenceUrl string `yaml:"url"`
+}
+
+type ConfluenceUser struct {
+	// confluence 用户与用户token
+	// username:admin@alauda.io  /  token:xxxxxx
+	Username string `yaml:"username"`
+	Token    string `yaml:"token"`
 }
 
 func NewConfig() (*Config, error) {

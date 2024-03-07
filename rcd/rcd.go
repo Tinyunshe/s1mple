@@ -55,14 +55,14 @@ func (d *Document) release(documentHtmlContent string) error {
 
 	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
 	token := ""
-	for _, v := range d.Config.Parts {
+	for _, v := range d.Config.ConfluenceSpec.Parts {
 		if v.Username == d.Assignee {
 			token = v.Token
 		}
 	}
 
 	// 声明发布到confluence请求的更多数据
-	url := d.Config.ConfluenceUrl + "/rest/api/content"
+	url := d.Config.ConfluenceSpec.ConfluenceUrl + "/rest/api/content"
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
