@@ -19,7 +19,7 @@ type ConfluenceUser struct {
 
 type ReleaseConfluenceDocument struct {
 	ConfluenceUrl  string           `yaml:"confluenceUrl"`
-	GoTemplatePath string           `yaml:"goTemplatePath"`
+	GotemplatePath string           `yaml:"gotemplatePath"`
 	Parts          []ConfluenceUser `yaml:"parts"`
 }
 

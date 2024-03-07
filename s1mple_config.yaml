@@ -1,8 +1,8 @@
 releaseConfluenceDocument:
   confluenceUrl: "https://confluence.alauda.cn"
-  goTemplatePath: "../doc_go_template.txt"
+  gotemplatePath: "../doc_go_template.txt"
   parts:
   - username: stwu@alauda.io
     token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
-  - username: hyang@alauda.io
-    token: "hahahahha"
+  - username: huiyang1@alauda.io
+    token: "NDE5NTI0ODAxMTMzOvFj/Fn/lSiKARc7aUslzB+ZfH5W"

@@ -26,7 +26,7 @@ type Document struct {
 // 将Document中的数据渲染到故障文档模板中,返回的是html格式的大字符串,可理解为文档
 func (d *Document) render() (string, error) {
 	// 打开模板文件句柄
-	file, err := os.Open(d.Config.GoTemplatePath)
+	file, err := os.Open(d.Config.GotemplatePath)
 	if err != nil {
 		return "", fmt.Errorf(err.Error())
 	}
@@ -87,6 +87,11 @@ func (d *Document) release(documentHtmlContent string) error {
 
 // 由于html格式字符串无法直接传到json中,需要创建对象去构造,并返回post请求需要的reader
 func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Reader, error) {
+	// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
+	fixNameFunc := func() string {
+		return fmt.Sprintf("~" + strings.Split(d.Assignee, "@")[0])
+	}
+
 	/*
 		body 示例
 			{
@@ -101,6 +106,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Re
 			    }
 			}
 	*/
+	// 创建符合body json的匿名结构体传入数据
 	crb := &struct {
 		Title string `json:"title"`
 		Type  string `json:"type"`
@@ -118,7 +124,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Re
 		Type:  "page",
 		Space: struct {
 			Key string "json:\"key\""
-		}{"~stwu"},
+		}{fixNameFunc()},
 		Body: struct {
 			Storage struct {
 				Value          string "json:\"value\""
@@ -146,6 +152,8 @@ func newDocument(r *http.Request, config *config.Config) (*Document, error) {
 	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
 		return nil, fmt.Errorf(err.Error())
 	}
+
+	// 将config传到document结构体中
 	d.Config = config
 	return d, nil
 }
@@ -156,7 +164,7 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	defer r.Body.Close()
 
 	doc, err := newDocument(r, config)
