@@ -8,12 +8,16 @@ import (
 	"net/http"
 	"os"
 	"s1mple/config"
+	"s1mple/rcd/img"
 	"strings"
 	"text/template"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 type Document struct {
 	CloudId       string         `json:"cloudId"`
+	PageId        string         `json:",omitempty"`
 	Jira          string         `json:"jira"`
 	Version       string         `json:"version"`
 	AssigneeEmail string         `json:"assignee_email"`
@@ -21,6 +25,7 @@ type Document struct {
 	Subject       string         `json:"subject"`
 	Content       string         `json:"content"`
 	Comments      string         `json:"comments"`
+	Imgs          []img.Img      `json:",omitempty"`
 	Config        *config.Config `json:",omitempty"`
 }
 
@@ -46,6 +51,58 @@ func (d *Document) render() (string, error) {
 	return buf.String(), nil
 }
 
+// 判断comments中是否有html img标签和img src的地址列表
+// func (d *Document) isExisitHtmlImg(html *goquery.Document) bool {
+// 	// 如果找到的img长度等于0，判断没有img
+// 	if html.Find("img").Length() == 0 {
+// 		return false
+// 	} else {
+// 		// 否则存在img，则实例化Img对象传入img http地址和img本地存放的目录
+// 		imgs := make([]img.Img, 5)
+// 		html.Find("img").Each(func(i int, s *goquery.Selection) {
+// 			src, _ := s.Attr("src")
+// 			imgs = append(imgs, *img.NewImg(src, d.Config.CommentsImgDirectory))
+// 		})
+// 		return true
+// 	}
+// }
+
+// commentsHandler分为3个部分
+// 1、识别html中的img同时并发下载img
+// 2、将img替换为confluence所识别的ac:image
+// 3、删除内容中的“-----”号，修饰文档内容
+func (d *Document) commentsHandler() error {
+	// 实例化html数据格式的解析对象
+	html, err := goquery.NewDocumentFromReader(strings.NewReader(d.Comments))
+	if err != nil {
+		return fmt.Errorf(err.Error())
+	}
+	// 如果找到的img长度不等于0，认为是存在img的
+	if html.Find("img").Length() != 0 {
+		// 否则存在img，则实例化Img对象传入img http地址和img本地存放的目录
+		imgList := make([]img.Img, 5)
+		html.Find("img").Each(func(i int, s *goquery.Selection) {
+			src, _ := s.Attr("src")
+			img := img.NewImg(src, d.Config.CommentsImgDirectory)
+			// 并发下载img
+			go img.Download()
+
+			// 将img替换为confluence所识别的ac:image
+			newTag := fmt.Sprintf(`<ac:image><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
+			s.ReplaceWithHtml(newTag)
+
+			// 追加到img对象列表
+			imgList = append(imgList, *img)
+		})
+		d.Comments, err = html.Html()
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+	}
+
+	return nil
+}
+
 // 传入文档,将文档发布到confluence
 func (d *Document) release(documentHtmlContent string) error {
 	// 通过对象构造body数据,返回reader
@@ -69,9 +126,9 @@ func (d *Document) release(documentHtmlContent string) error {
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Connection", "keep-alive")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Connection", "keep-alive")
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf(err.Error())
@@ -173,19 +230,25 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 
 	doc, err := newDocument(r, config)
 	if err != nil {
-		http.Error(w, "Error decoding JSON", http.StatusBadRequest)
+		http.Error(w, "Error create document", http.StatusBadRequest)
+		return
+	}
+
+	err = doc.commentsHandler()
+	if err != nil {
+		http.Error(w, "Error fix document comments", http.StatusBadRequest)
 		return
 	}
 
 	documentHtmlContent, err := doc.render()
 	if err != nil {
-		http.Error(w, "Error render doc", http.StatusBadRequest)
+		http.Error(w, "Error render document", http.StatusBadRequest)
 		return
 	}
 
 	err = doc.release(documentHtmlContent)
 	if err != nil {
-		http.Error(w, "Error release doc", http.StatusBadRequest)
+		http.Error(w, "Error release document", http.StatusBadRequest)
 		return
 	}
 

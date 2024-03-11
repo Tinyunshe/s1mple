@@ -18,6 +18,8 @@ type ReleaseConfluenceDocument struct {
 	GotemplatePath string `yaml:"gotemplatePath"`
 	// 关于confluence的配置
 	ConfluenceSpec ConfluenceSpec `yaml:"confluenceSpec"`
+	// html img临时存放的路径
+	CommentsImgDirectory string `yaml:"commentsImgDirectory"`
 }
 
 type ConfluenceSpec struct {
