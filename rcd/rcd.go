@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/tidwall/gjson"
 )
 
 type Document struct {
@@ -94,12 +95,12 @@ func (d *Document) commentsHandler() error {
 			// 追加到img对象列表
 			imgList = append(imgList, *img)
 		})
+
 		d.Comments, err = html.Html()
 		if err != nil {
 			return fmt.Errorf(err.Error())
 		}
 	}
-
 	return nil
 }
 
@@ -120,7 +121,7 @@ func (d *Document) release(documentHtmlContent string) error {
 	}
 
 	// 声明发布到confluence请求的更多数据
-	url := d.Config.ConfluenceSpec.ConfluenceUrl + "/rest/api/content"
+	url := d.Config.ConfluenceUrl + "/rest/api/content"
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
@@ -135,11 +136,19 @@ func (d *Document) release(documentHtmlContent string) error {
 	}
 	defer resp.Body.Close()
 
-	resbody, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
-	fmt.Println(string(resbody))
+	fmt.Println(string(body))
+
+	// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
+	if !gjson.Get(string(body), "results").IsArray() {
+		return fmt.Errorf("confluence respon body json error, results not found or type error")
+	}
+	for _, v := range gjson.Get(string(body), "results").Array() {
+		d.PageId = v.Get("id").String()
+	}
 	return nil
 }
 
@@ -250,6 +259,10 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 	if err != nil {
 		http.Error(w, "Error release document", http.StatusBadRequest)
 		return
+	}
+
+	for i := 0; i <= len(doc.Imgs); i++ {
+		go doc.Imgs[i].Upload(doc.Config.ConfluenceUrl, doc.PageId)
 	}
 
 	w.Write([]byte("ok"))

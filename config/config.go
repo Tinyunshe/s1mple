@@ -14,10 +14,10 @@ type Config struct {
 }
 
 type ReleaseConfluenceDocument struct {
+	// 关于confluence的配置
+	ConfluenceSpec `yaml:"confluenceSpec"`
 	// 故障模版gotemplate的文件位置
 	GotemplatePath string `yaml:"gotemplatePath"`
-	// 关于confluence的配置
-	ConfluenceSpec ConfluenceSpec `yaml:"confluenceSpec"`
 	// html img临时存放的路径
 	CommentsImgDirectory string `yaml:"commentsImgDirectory"`
 }

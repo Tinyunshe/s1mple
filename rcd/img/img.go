@@ -1,8 +1,10 @@
 package img
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
@@ -17,7 +19,7 @@ type Img struct {
 	Name        string
 }
 
-// 下载图片
+// 下载img
 func (i *Img) Download() {
 	resp, err := http.Get(i.HttpAddress)
 	if err != nil {
@@ -38,9 +40,69 @@ func (i *Img) Download() {
 	}
 }
 
-// 上传图片到confluence
-func (i *Img) Upload(cf string) {
+// 上传img到confluence
+func (i *Img) Upload(cf, pageId string) {
+	// 打开img本地路径的句柄
+	file, err := os.Open(i.LocalPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
 
+	// 创建buffer，通过multipart包创建媒体文件
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("img", i.LocalPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// 将img写入请求缓存中
+	_, err = io.Copy(part, file)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// 添加媒体类请求中的body参数
+	writer.WriteField("minorEdit", "true")
+	// writer.WriteField("comment", "Example attachment comment")
+
+	err = writer.Close()
+	if err != nil {
+		fmt.Println("Error closing writer:", err)
+		return
+	}
+	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
+	// token := ""
+	// for _, v := range d.Config.ConfluenceSpec.Parts {
+	// 	if v.Username == d.AssigneeEmail {
+	// 		token = v.Token
+	// 	}
+	// }
+
+	// 初始化http client
+	client := &http.Client{}
+
+	// 发起上传img到confluence的请求
+	url := fmt.Sprintf("%v/rest/api/content/%v/child/attachment", cf, pageId)
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("X-Atlassian-Token", "nocheck")
+	req.Header.Set("Authorization", "Bearer NjMxOTQwNjQxNDkwOqDnS2dgE7gQ/dS62RhN8gg1L3L8")
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// 打印返回body
+	c, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(c))
 }
 
 func splitName(addr string) string {
