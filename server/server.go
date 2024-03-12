@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"s1mple/auth"
 	"s1mple/config"
 	"s1mple/rcd"
@@ -38,8 +37,6 @@ func (s *Server) Run() {
 	s.loadUrl()
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic("Start server error")
 	}
-	fmt.Println("Server start success")
 }

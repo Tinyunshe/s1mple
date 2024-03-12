@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 )
 
 // 使用groutine将comments中的img下载到本地，上传到confluence
@@ -17,6 +18,23 @@ type Img struct {
 	HttpAddress string
 	LocalPath   string
 	Name        string
+}
+
+var (
+	lock sync.Mutex
+)
+
+func splitName(addr string) string {
+	splitStr := strings.Split(addr, "/")
+	return splitStr[len(splitStr)-1]
+}
+
+func NewImg(address string, dir string) *Img {
+	return &Img{
+		HttpAddress: address,
+		Name:        splitName(address),
+		LocalPath:   fmt.Sprintf("%v/%v", dir, splitName(address)),
+	}
 }
 
 // 下载img
@@ -52,25 +70,26 @@ func (i *Img) Upload(cf, pageId string) {
 	// 创建buffer，通过multipart包创建媒体文件
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("img", i.LocalPath)
+	part, err := writer.CreateFormFile("file", i.LocalPath)
 	if err != nil {
 		fmt.Println(err)
 	}
 
 	// 将img写入请求缓存中
+	lock.Lock()
 	_, err = io.Copy(part, file)
 	if err != nil {
 		fmt.Println(err)
+		lock.Unlock()
 	}
+	lock.Unlock()
 
 	// 添加媒体类请求中的body参数
 	writer.WriteField("minorEdit", "true")
 	// writer.WriteField("comment", "Example attachment comment")
-
 	err = writer.Close()
 	if err != nil {
 		fmt.Println("Error closing writer:", err)
-		return
 	}
 	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
 	// token := ""
@@ -103,17 +122,4 @@ func (i *Img) Upload(cf, pageId string) {
 		fmt.Println(err)
 	}
 	fmt.Println(string(c))
-}
-
-func splitName(addr string) string {
-	splitStr := strings.Split(addr, "/")
-	return splitStr[len(splitStr)-1]
-}
-
-func NewImg(address string, dir string) *Img {
-	return &Img{
-		HttpAddress: address,
-		Name:        splitName(address),
-		LocalPath:   fmt.Sprintf("%v/%v", dir, splitName(address)),
-	}
 }

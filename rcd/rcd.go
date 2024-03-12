@@ -81,7 +81,6 @@ func (d *Document) commentsHandler() error {
 	// 如果找到的img长度不等于0，认为是存在img的
 	if html.Find("img").Length() != 0 {
 		// 否则存在img，则实例化Img对象传入img http地址和img本地存放的目录
-		imgList := make([]img.Img, 5)
 		html.Find("img").Each(func(i int, s *goquery.Selection) {
 			src, _ := s.Attr("src")
 			img := img.NewImg(src, d.Config.CommentsImgDirectory)
@@ -93,13 +92,17 @@ func (d *Document) commentsHandler() error {
 			s.ReplaceWithHtml(newTag)
 
 			// 追加到img对象列表
-			imgList = append(imgList, *img)
+			d.Imgs = append(d.Imgs, *img)
 		})
-
-		d.Comments, err = html.Html()
+		replaceImgAfterHtml, err := html.Html()
 		if err != nil {
 			return fmt.Errorf(err.Error())
 		}
+
+		// 修饰内容
+		replaceDelimiterAfterHtml := strings.Replace(replaceImgAfterHtml, "----------------------------------------", "", -1)
+
+		d.Comments = replaceDelimiterAfterHtml
 	}
 	return nil
 }
@@ -143,11 +146,15 @@ func (d *Document) release(documentHtmlContent string) error {
 	fmt.Println(string(body))
 
 	// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
-	if !gjson.Get(string(body), "results").IsArray() {
+	// if !gjson.Get(string(body), "results").IsArray() {
+	// 	return fmt.Errorf("confluence respon body json error, results not found or type error")
+	// }
+	// for _, v := range gjson.Get(string(body), "results").Array() {
+	// 	d.PageId = v.Get("id").String()
+	// }
+	d.PageId = gjson.Get(string(body), "id").String()
+	if d.PageId == "" {
 		return fmt.Errorf("confluence respon body json error, results not found or type error")
-	}
-	for _, v := range gjson.Get(string(body), "results").Array() {
-		d.PageId = v.Get("id").String()
 	}
 	return nil
 }
@@ -261,7 +268,7 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
-	for i := 0; i <= len(doc.Imgs); i++ {
+	for i := 0; i < len(doc.Imgs); i++ {
 		go doc.Imgs[i].Upload(doc.Config.ConfluenceUrl, doc.PageId)
 	}
 
