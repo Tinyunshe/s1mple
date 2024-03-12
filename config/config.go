@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	// 发布confluence文档功能配置
 	ReleaseConfluenceDocument `yaml:"releaseConfluenceDocument"`
-	Logger                    *zap.Logger `yaml:",omitempty"`
 }
 
 type ReleaseConfluenceDocument struct {
@@ -60,13 +58,5 @@ func NewConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf(err.Error())
 	}
-
-	// 初始化日志
-	logger, err := zap.NewProduction()
-	if err != nil {
-		panic("Initialize zap log error")
-	}
-	config.Logger = logger
-
 	return config, nil
 }

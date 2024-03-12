@@ -14,6 +14,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/tidwall/gjson"
+	"go.uber.org/zap"
 )
 
 type Document struct {
@@ -29,6 +30,10 @@ type Document struct {
 	Imgs          []img.Img      `json:",omitempty"`
 	Config        *config.Config `json:",omitempty"`
 }
+
+var (
+	logger, _ = zap.NewProduction()
+)
 
 // 将Document中的数据渲染到故障文档模板中,返回的是html格式的大字符串,可理解为文档
 func (d *Document) render() (string, error) {
@@ -107,12 +112,12 @@ func (d *Document) commentsHandler() error {
 	return nil
 }
 
-// 传入文档,将文档发布到confluence
-func (d *Document) release(documentHtmlContent string) error {
+// 传入文档,将文档发布到confluence,返回当前assignee在confluence的token
+func (d *Document) release(documentHtmlContent string) (string, error) {
 	// 通过对象构造body数据,返回reader
 	payload, err := d.constructReleaseBody(documentHtmlContent)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return "", fmt.Errorf(err.Error())
 	}
 
 	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
@@ -128,20 +133,20 @@ func (d *Document) release(documentHtmlContent string) error {
 	client := &http.Client{}
 	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return "", fmt.Errorf(err.Error())
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Connection", "keep-alive")
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return "", fmt.Errorf(err.Error())
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return "", fmt.Errorf(err.Error())
 	}
 	fmt.Println(string(body))
 
@@ -154,9 +159,9 @@ func (d *Document) release(documentHtmlContent string) error {
 	// }
 	d.PageId = gjson.Get(string(body), "id").String()
 	if d.PageId == "" {
-		return fmt.Errorf("confluence respon body json error, results not found or type error")
+		return "", fmt.Errorf("confluence respon body json error, results not found or type error")
 	}
-	return nil
+	return token, nil
 }
 
 // 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
@@ -219,6 +224,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Re
 
 // 处理来自udesk触发器的post请求中的json数据构造为Document文档对象
 func newDocument(r *http.Request, config *config.Config) (*Document, error) {
+	defer logger.Sync()
 	d := &Document{}
 
 	// 从body内将json解析
@@ -232,11 +238,13 @@ func newDocument(r *http.Request, config *config.Config) (*Document, error) {
 
 	// 将config传到document结构体中
 	d.Config = config
+	logger.Info("New document success")
 	return d, nil
 }
 
 // 发布confluence文档入口
 func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config) {
+	defer logger.Sync()
 	defer r.Body.Close()
 
 	if r.Method != http.MethodPost {
@@ -262,14 +270,16 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
-	err = doc.release(documentHtmlContent)
+	token, err := doc.release(documentHtmlContent)
 	if err != nil {
 		http.Error(w, "Error release document", http.StatusBadRequest)
 		return
 	}
 
-	for i := 0; i < len(doc.Imgs); i++ {
-		go doc.Imgs[i].Upload(doc.Config.ConfluenceUrl, doc.PageId)
+	if count := len(doc.Imgs); count != 0 {
+		for i := 0; i < count; i++ {
+			go doc.Imgs[i].Upload(doc.Config.ConfluenceUrl, doc.PageId, token)
+		}
 	}
 
 	w.Write([]byte("ok"))

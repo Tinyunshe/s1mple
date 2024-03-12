@@ -58,8 +58,8 @@ func (i *Img) Download() {
 	}
 }
 
-// 上传img到confluence
-func (i *Img) Upload(cf, pageId string) {
+// 上传img到confluence，传入confluence地址，发布文档后返回的pageId，和当前assignee在confluence的token
+func (i *Img) Upload(cf string, pageId string, token string) {
 	// 打开img本地路径的句柄
 	file, err := os.Open(i.LocalPath)
 	if err != nil {
@@ -91,13 +91,6 @@ func (i *Img) Upload(cf, pageId string) {
 	if err != nil {
 		fmt.Println("Error closing writer:", err)
 	}
-	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
-	// token := ""
-	// for _, v := range d.Config.ConfluenceSpec.Parts {
-	// 	if v.Username == d.AssigneeEmail {
-	// 		token = v.Token
-	// 	}
-	// }
 
 	// 初始化http client
 	client := &http.Client{}
@@ -110,7 +103,7 @@ func (i *Img) Upload(cf, pageId string) {
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("X-Atlassian-Token", "nocheck")
-	req.Header.Set("Authorization", "Bearer NjMxOTQwNjQxNDkwOqDnS2dgE7gQ/dS62RhN8gg1L3L8")
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
