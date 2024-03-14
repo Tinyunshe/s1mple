@@ -17,6 +17,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer logger.Sync()
+
 	app := server.Server{Config: config, Logger: logger}
 	app.Run()
 }

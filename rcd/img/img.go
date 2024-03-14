@@ -29,14 +29,6 @@ func splitName(addr string) string {
 	return splitStr[len(splitStr)-1]
 }
 
-func NewImg(address string, dir string) *Img {
-	return &Img{
-		HttpAddress: address,
-		Name:        splitName(address),
-		LocalPath:   fmt.Sprintf("%v/%v", dir, splitName(address)),
-	}
-}
-
 // 下载img
 func (i *Img) Download(done chan<- bool) {
 	resp, err := http.Get(i.HttpAddress)
@@ -56,6 +48,7 @@ func (i *Img) Download(done chan<- bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	done <- true
 }
 
@@ -111,6 +104,7 @@ func (i *Img) Upload(cf string, pageId string, token string, done <-chan bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	defer resp.Body.Close()
 
 	// 打印返回body
 	c, err := io.ReadAll(resp.Body)
@@ -118,4 +112,12 @@ func (i *Img) Upload(cf string, pageId string, token string, done <-chan bool) {
 		fmt.Println(err)
 	}
 	fmt.Println(string(c))
+}
+
+func NewImg(address string, dir string) *Img {
+	return &Img{
+		HttpAddress: address,
+		Name:        splitName(address),
+		LocalPath:   fmt.Sprintf("%v/%v", dir, splitName(address)),
+	}
 }

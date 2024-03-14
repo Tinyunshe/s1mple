@@ -59,6 +59,8 @@ func (d *Document) fixAssignee() string {
 // 2、将img替换为confluence所识别的ac:image
 // 3、删除内容中的“-----”号，修饰文档内容
 func (d *Document) commentsHandler() error {
+	// 修饰内容
+	d.Comments = strings.Replace(d.Comments, "----------------------------------------", "", -1)
 	// 初始化解析html数据格式的对象
 	html, err := goquery.NewDocumentFromReader(strings.NewReader(d.Comments))
 	if err != nil {
@@ -66,6 +68,7 @@ func (d *Document) commentsHandler() error {
 	}
 	// 如果找到的img长度不等于0，认为是存在img的
 	if html.Find("img").Length() != 0 {
+		d.Logger.Info("Replace img")
 		// 否则存在img，则实例化Img对象传入img http地址和img本地存放的目录
 		html.Find("img").Each(func(i int, s *goquery.Selection) {
 			src, _ := s.Attr("src")
@@ -84,11 +87,7 @@ func (d *Document) commentsHandler() error {
 		if err != nil {
 			return fmt.Errorf(err.Error())
 		}
-
-		// 修饰内容
-		replaceDelimiterAfterHtml := strings.Replace(replaceImgAfterHtml, "----------------------------------------", "", -1)
-
-		d.Comments = replaceDelimiterAfterHtml
+		d.Comments = replaceImgAfterHtml
 	}
 	return nil
 }
@@ -143,6 +142,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Re
 		fmt.Println(err)
 		return nil, fmt.Errorf(err.Error())
 	}
+	d.Logger.Info("ConstructReleaseBody")
 	return strings.NewReader(string(body)), nil
 }
 
@@ -165,6 +165,7 @@ func (d *Document) render() (string, error) {
 	if err := t.Execute(buf, d); err != nil {
 		return "", fmt.Errorf(err.Error())
 	}
+	d.Logger.Debug("Render document", zap.String("content", buf.String()))
 	return buf.String(), nil
 }
 
@@ -203,19 +204,14 @@ func (d *Document) release(documentHtmlContent string) error {
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
-	fmt.Println(string(body))
+	d.Logger.Info("Release respone", zap.String("respone", string(body)))
 
 	// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
-	// if !gjson.Get(string(body), "results").IsArray() {
-	// 	return fmt.Errorf("confluence respon body json error, results not found or type error")
-	// }
-	// for _, v := range gjson.Get(string(body), "results").Array() {
-	// 	d.PageId = v.Get("id").String()
-	// }
 	d.PageId = gjson.Get(string(body), "id").String()
 	if d.PageId == "" {
 		return fmt.Errorf("confluence respon body json error, results not found or type error")
 	}
+	d.Logger.Info("Release document success", zap.String("Respone confluence pageId", d.PageId), zap.String("Assignee", d.Assignee))
 	return nil
 }
 
@@ -250,13 +246,12 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	// 将config和logger传到document结构体中
 	d.Config = config
 	d.Logger = logger
-	d.Logger.Info("New document success")
+	d.Logger.Info("New document success", zap.Any("Document", d))
 	return d, nil
 }
 
 // 发布confluence文档入口
 func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config, logger *zap.Logger) {
-	defer logger.Sync()
 	defer r.Body.Close()
 
 	if r.Method != http.MethodPost {
@@ -289,9 +284,10 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 	}
 
 	if len(doc.Imgs) != 0 {
+		logger.Info("Exisit img", zap.String("PageId", doc.PageId), zap.Any("Imgs", doc.Imgs))
 		doc.imgHander()
 	} else {
-		logger.Info("No exisit img")
+		logger.Info("No exisit img", zap.String("PageId", doc.PageId))
 	}
 
 	w.Write([]byte("ok"))
