@@ -26,6 +26,11 @@ func (s *Server) loadUrl() {
 	http.HandleFunc("/health", auth.BasicAuth(s.healthHandler))
 }
 
+// health接口的处理
+func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "ok")
+}
+
 // 处理发布到confluence文档功能的闭包函数，作用是将外部的config属性传入到功能入口
 func (s *Server) rcdHandler(w http.ResponseWriter, r *http.Request) {
 	func() {
@@ -33,9 +38,8 @@ func (s *Server) rcdHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-// health接口的处理
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "ok")
+func (s *Server) rcdCleanImgs() {
+	// 待处理
 }
 
 func (s *Server) waitForShutdown() {
@@ -51,7 +55,11 @@ func (s *Server) waitForShutdown() {
 // server启动入口
 func (s *Server) Run() {
 	s.loadUrl()
+
 	go http.ListenAndServe(":8080", nil)
 	s.Logger.Info("Start server success :8080")
+
+	// go s.rcdCleanImgs()
+
 	s.waitForShutdown()
 }

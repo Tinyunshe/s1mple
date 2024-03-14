@@ -3,7 +3,9 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -19,7 +21,7 @@ type ReleaseConfluenceDocument struct {
 	// 故障模版gotemplate的文件位置
 	GotemplatePath string `yaml:"gotemplatePath"`
 	// html img临时存放的路径
-	CommentsImgDirectory string `yaml:"commentsImgDirectory"`
+	DocumentImgDirectory string `yaml:"documentImgDirectory"`
 }
 
 type ConfluenceSpec struct {
@@ -27,6 +29,12 @@ type ConfluenceSpec struct {
 	Parts []ConfluenceUser `yaml:"parts"`
 	// confluence访问地址，http://xxx
 	ConfluenceUrl string `yaml:"url"`
+	// 请求confluence超时时间,默认10s
+	Timeout int `yaml:"timeout,omitempty"`
+	// 重试次数，默认2
+	RetryCount int `yaml:"retryCount,omitempty"`
+	// 请求confluence的http client
+	HttpClient *http.Client `yaml:",omitempty"`
 }
 
 type ConfluenceUser struct {
@@ -34,6 +42,18 @@ type ConfluenceUser struct {
 	// username:admin@alauda.io  /  token:xxxxxx
 	Username string `yaml:"username"`
 	Token    string `yaml:"token"`
+}
+
+func (c *Config) initConfluenceHttpClient() {
+	if c.ConfluenceSpec.Timeout == 0 {
+		c.ConfluenceSpec.Timeout = 10
+	}
+	if c.ConfluenceSpec.RetryCount == 0 {
+		c.ConfluenceSpec.RetryCount = 2
+	}
+	c.ConfluenceSpec.HttpClient = &http.Client{
+		Timeout: time.Duration(c.ConfluenceSpec.Timeout) * time.Second,
+	}
 }
 
 func NewConfig() (*Config, error) {
@@ -58,5 +78,9 @@ func NewConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf(err.Error())
 	}
+
+	// 初始化请求confluence的http client
+	config.initConfluenceHttpClient()
+
 	return config, nil
 }

@@ -1,5 +1,5 @@
 releaseConfluenceDocument:
-  commentsImgDirectory: "../img_tmp_dir"
+  documentImgDirectory: "../img_tmp_dir"
   gotemplatePath: "../doc_go_template.txt"
   confluenceSpec:
     url: "http://192.168.143.145:31871"

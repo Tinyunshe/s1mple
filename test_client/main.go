@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"net/http"
+)
+
 // func main() {
 // 	payload := strings.NewReader(`{"id":"1","jira":"http://xxx","assignee":"stwu@alauda.io","subject":"docker异常","content":"docker异常怀疑机器导致","comments":"1、排查与机器有关"}`)
 // 	url := "http://127.0.0.1:8080/release_confluence_document"
@@ -163,7 +168,16 @@ package main
 // 		Wg.Done()
 // }
 
-// type Document struct {
-// 	Imgs []*img.Img
+//	type Document struct {
+//		Imgs []*img.Img
+//	}
+//
 // }
-// }
+func main() {
+	x := 0
+	for i := 0; i < 3; i++ {
+		x = i
+	}
+	fmt.Println(x)
+	http.StatusOK
+}
