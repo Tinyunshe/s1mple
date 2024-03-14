@@ -3,13 +3,19 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"s1mple/auth"
 	"s1mple/config"
 	"s1mple/rcd"
+	"syscall"
+
+	"go.uber.org/zap"
 )
 
 type Server struct {
 	Config *config.Config
+	Logger *zap.Logger
 }
 
 // 加载需要注册的URL
@@ -23,7 +29,7 @@ func (s *Server) loadUrl() {
 // 处理发布到confluence文档功能的闭包函数，作用是将外部的config属性传入到功能入口
 func (s *Server) rcdHandler(w http.ResponseWriter, r *http.Request) {
 	func() {
-		rcd.ReleaseConfluenceDocument(w, r, s.Config)
+		rcd.ReleaseConfluenceDocument(w, r, s.Config, s.Logger)
 	}()
 }
 
@@ -32,11 +38,20 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "ok")
 }
 
+func (s *Server) waitForShutdown() {
+	// 捕获程序退出信号
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+
+	// 程序退出时刷新日志
+	s.Logger.Info("Shutting down server")
+}
+
 // server启动入口
 func (s *Server) Run() {
 	s.loadUrl()
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic("Start server error")
-	}
+	go http.ListenAndServe(":8080", nil)
+	s.Logger.Info("Start server success :8080")
+	s.waitForShutdown()
 }

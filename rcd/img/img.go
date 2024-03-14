@@ -38,7 +38,7 @@ func NewImg(address string, dir string) *Img {
 }
 
 // 下载img
-func (i *Img) Download() {
+func (i *Img) Download(done chan<- bool) {
 	resp, err := http.Get(i.HttpAddress)
 	if err != nil {
 		fmt.Println(err)
@@ -56,10 +56,13 @@ func (i *Img) Download() {
 	if err != nil {
 		fmt.Println(err)
 	}
+	done <- true
 }
 
 // 上传img到confluence，传入confluence地址，发布文档后返回的pageId，和当前assignee在confluence的token
-func (i *Img) Upload(cf string, pageId string, token string) {
+func (i *Img) Upload(cf string, pageId string, token string, done <-chan bool) {
+	<-done
+
 	// 打开img本地路径的句柄
 	file, err := os.Open(i.LocalPath)
 	if err != nil {

@@ -19,46 +19,22 @@ import (
 
 type Document struct {
 	CloudId       string         `json:"cloudId"`
-	PageId        string         `json:",omitempty"`
 	Jira          string         `json:"jira"`
 	Version       string         `json:"version"`
 	AssigneeEmail string         `json:"assignee_email"`
-	Assignee      string         `json:"assignee,omitempty"`
 	Subject       string         `json:"subject"`
 	Content       string         `json:"content"`
 	Comments      string         `json:"comments"`
+	Assignee      string         `json:"assignee,omitempty"`
+	PageId        string         `json:",omitempty"`
+	ReleaserToken string         `json:",omitempty"`
 	Imgs          []img.Img      `json:",omitempty"`
 	Config        *config.Config `json:",omitempty"`
-}
-
-var (
-	logger, _ = zap.NewProduction()
-)
-
-// 将Document中的数据渲染到故障文档模板中,返回的是html格式的大字符串,可理解为文档
-func (d *Document) render() (string, error) {
-	// 打开模板文件句柄
-	file, err := os.Open(d.Config.GotemplatePath)
-	if err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-	defer file.Close()
-	content, err := io.ReadAll(file)
-	if err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-	// 解析文件内容返回template对象
-	t := template.Must(template.New("").Parse(string(content)))
-	buf := &bytes.Buffer{}
-	// 执行解析
-	if err := t.Execute(buf, d); err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-	return buf.String(), nil
+	Logger        *zap.Logger    `json:",omitempty"`
 }
 
 // 判断comments中是否有html img标签和img src的地址列表
-// func (d *Document) isExisitHtmlImg(html *goquery.Document) bool {
+// func (d *Document) exisitHtmlImg(html *goquery.Document) bool {
 // 	// 如果找到的img长度等于0，判断没有img
 // 	if html.Find("img").Length() == 0 {
 // 		return false
@@ -73,12 +49,17 @@ func (d *Document) render() (string, error) {
 // 	}
 // }
 
+// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
+func (d *Document) fixAssignee() string {
+	return fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
+}
+
 // commentsHandler分为3个部分
-// 1、识别html中的img同时并发下载img
+// 1、识别html中的img tag，初始化img对象传入document.Imgs切片
 // 2、将img替换为confluence所识别的ac:image
 // 3、删除内容中的“-----”号，修饰文档内容
 func (d *Document) commentsHandler() error {
-	// 实例化html数据格式的解析对象
+	// 初始化解析html数据格式的对象
 	html, err := goquery.NewDocumentFromReader(strings.NewReader(d.Comments))
 	if err != nil {
 		return fmt.Errorf(err.Error())
@@ -88,15 +69,15 @@ func (d *Document) commentsHandler() error {
 		// 否则存在img，则实例化Img对象传入img http地址和img本地存放的目录
 		html.Find("img").Each(func(i int, s *goquery.Selection) {
 			src, _ := s.Attr("src")
+
+			// 初始化img对象，传入存放img文件的目录
 			img := img.NewImg(src, d.Config.CommentsImgDirectory)
-			// 并发下载img
-			go img.Download()
 
 			// 将img替换为confluence所识别的ac:image
 			newTag := fmt.Sprintf(`<ac:image><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
 			s.ReplaceWithHtml(newTag)
 
-			// 追加到img对象列表
+			// 追加到imgs对象列表
 			d.Imgs = append(d.Imgs, *img)
 		})
 		replaceImgAfterHtml, err := html.Html()
@@ -110,63 +91,6 @@ func (d *Document) commentsHandler() error {
 		d.Comments = replaceDelimiterAfterHtml
 	}
 	return nil
-}
-
-// 传入文档,将文档发布到confluence,返回当前assignee在confluence的token
-func (d *Document) release(documentHtmlContent string) (string, error) {
-	// 通过对象构造body数据,返回reader
-	payload, err := d.constructReleaseBody(documentHtmlContent)
-	if err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-
-	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
-	token := ""
-	for _, v := range d.Config.ConfluenceSpec.Parts {
-		if v.Username == d.AssigneeEmail {
-			token = v.Token
-		}
-	}
-
-	// 声明发布到confluence请求的更多数据
-	url := d.Config.ConfluenceUrl + "/rest/api/content"
-	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPost, url, payload)
-	if err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Connection", "keep-alive")
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf(err.Error())
-	}
-	fmt.Println(string(body))
-
-	// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
-	// if !gjson.Get(string(body), "results").IsArray() {
-	// 	return fmt.Errorf("confluence respon body json error, results not found or type error")
-	// }
-	// for _, v := range gjson.Get(string(body), "results").Array() {
-	// 	d.PageId = v.Get("id").String()
-	// }
-	d.PageId = gjson.Get(string(body), "id").String()
-	if d.PageId == "" {
-		return "", fmt.Errorf("confluence respon body json error, results not found or type error")
-	}
-	return token, nil
-}
-
-// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
-func (d *Document) fixAssignee() string {
-	return fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
 }
 
 // 由于html格式字符串无法直接传到json中,需要创建对象去构造,并返回post请求需要的reader
@@ -222,9 +146,96 @@ func (d *Document) constructReleaseBody(documentHtmlContent string) (*strings.Re
 	return strings.NewReader(string(body)), nil
 }
 
+// 将Document中的数据渲染到故障文档模板中,返回的是html格式的大字符串,可理解为文档
+func (d *Document) render() (string, error) {
+	// 打开模板文件句柄
+	file, err := os.Open(d.Config.GotemplatePath)
+	if err != nil {
+		return "", fmt.Errorf(err.Error())
+	}
+	defer file.Close()
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf(err.Error())
+	}
+	// 解析文件内容返回template对象
+	t := template.Must(template.New("").Parse(string(content)))
+	buf := &bytes.Buffer{}
+	// 执行解析
+	if err := t.Execute(buf, d); err != nil {
+		return "", fmt.Errorf(err.Error())
+	}
+	return buf.String(), nil
+}
+
+// 传入文档,将文档发布到confluence,返回当前assignee在confluence的token
+func (d *Document) release(documentHtmlContent string) error {
+	// 通过对象构造body数据,返回reader
+	payload, err := d.constructReleaseBody(documentHtmlContent)
+	if err != nil {
+		return fmt.Errorf(err.Error())
+	}
+
+	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
+	for _, v := range d.Config.ConfluenceSpec.Parts {
+		if v.Username == d.AssigneeEmail {
+			d.ReleaserToken = v.Token
+		}
+	}
+
+	// 声明发布到confluence请求的更多数据
+	url := d.Config.ConfluenceUrl + "/rest/api/content"
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPost, url, payload)
+	if err != nil {
+		return fmt.Errorf(err.Error())
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+d.ReleaserToken)
+	req.Header.Set("Connection", "keep-alive")
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf(err.Error())
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf(err.Error())
+	}
+	fmt.Println(string(body))
+
+	// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
+	// if !gjson.Get(string(body), "results").IsArray() {
+	// 	return fmt.Errorf("confluence respon body json error, results not found or type error")
+	// }
+	// for _, v := range gjson.Get(string(body), "results").Array() {
+	// 	d.PageId = v.Get("id").String()
+	// }
+	d.PageId = gjson.Get(string(body), "id").String()
+	if d.PageId == "" {
+		return fmt.Errorf("confluence respon body json error, results not found or type error")
+	}
+	return nil
+}
+
+// img处理
+func (d *Document) imgHander() {
+	for i := 0; i < len(d.Imgs); i++ {
+		go func(this int) {
+			done := make(chan bool)
+			go func() {
+				d.Imgs[this].Download(done)
+			}()
+			go func() {
+				d.Imgs[this].Upload(d.Config.ConfluenceUrl, d.PageId, d.ReleaserToken, done)
+			}()
+		}(i)
+	}
+}
+
 // 处理来自udesk触发器的post请求中的json数据构造为Document文档对象
-func newDocument(r *http.Request, config *config.Config) (*Document, error) {
-	defer logger.Sync()
+func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*Document, error) {
 	d := &Document{}
 
 	// 从body内将json解析
@@ -236,14 +247,15 @@ func newDocument(r *http.Request, config *config.Config) (*Document, error) {
 	// 获取正确的Assignee名称
 	d.Assignee = d.fixAssignee()
 
-	// 将config传到document结构体中
+	// 将config和logger传到document结构体中
 	d.Config = config
-	logger.Info("New document success")
+	d.Logger = logger
+	d.Logger.Info("New document success")
 	return d, nil
 }
 
 // 发布confluence文档入口
-func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config) {
+func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config, logger *zap.Logger) {
 	defer logger.Sync()
 	defer r.Body.Close()
 
@@ -252,7 +264,7 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
-	doc, err := newDocument(r, config)
+	doc, err := newDocument(r, config, logger)
 	if err != nil {
 		http.Error(w, "Error create document", http.StatusBadRequest)
 		return
@@ -270,16 +282,16 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
-	token, err := doc.release(documentHtmlContent)
+	err = doc.release(documentHtmlContent)
 	if err != nil {
 		http.Error(w, "Error release document", http.StatusBadRequest)
 		return
 	}
 
-	if count := len(doc.Imgs); count != 0 {
-		for i := 0; i < count; i++ {
-			go doc.Imgs[i].Upload(doc.Config.ConfluenceUrl, doc.PageId, token)
-		}
+	if len(doc.Imgs) != 0 {
+		doc.imgHander()
+	} else {
+		logger.Info("No exisit img")
 	}
 
 	w.Write([]byte("ok"))

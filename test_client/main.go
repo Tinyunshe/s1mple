@@ -1,13 +1,5 @@
 package main
 
-import (
-	"fmt"
-	"s1mple/rcd/img"
-	"strings"
-
-	"github.com/PuerkitoBio/goquery"
-)
-
 // func main() {
 // 	payload := strings.NewReader(`{"id":"1","jira":"http://xxx","assignee":"stwu@alauda.io","subject":"docker异常","content":"docker异常怀疑机器导致","comments":"1、排查与机器有关"}`)
 // 	url := "http://127.0.0.1:8080/release_confluence_document"
@@ -134,39 +126,44 @@ import (
 // 	logger, _ := zap.NewProduction()
 // }
 
-func main() {
-	doc := &Document{
-		Imgs: make(chan *img.Img, 20),
-	}
-	doc.fix()
-	for v := range doc.Imgs {
-		fmt.Println(v)
-	}
-}
+// func main() {
+// 	doc := &Document{}
+// 	doc.fix()
+// 	doc.imgHander()
+// }
 
-func (d *Document) fix() {
-	htmlContent := `\n----------------------------------------\n<p>您好，如果确认问题解决，请您关闭工单，有其他问题，请再联系我们，感谢您的咨询与反馈，祝您生活愉快，再见。</p>\n----------------------------------------\n<p>zabbix普通用户执行的进程不属于TKE的任何容器组件，可以顺着进程号查询父进程是否是docker运行</p>\n----------------------------------------\n<p>您好，您的工单我们已做升级处理，我是本次为您服务的高级工程师，您的问题我这边正在处理当中，稍后为您同步进展，请您稍等。</p>\n----------------------------------------\n<p>您好，排查如图<img src="https://pro-cs-freq.udeskcs.com/icon/tid99781/mceclip0_1667978009817_qe6m6.png" width=\"451\" height=\"178\" />这边为您做升级处理</p>\n----------------------------------------\n<p>您好，您反馈的问题已经收到，这边先看下，请您稍等。</p>\n----------------------------------------\n<p>您好，您反馈的问题已分配任务给工程师，请您耐心等待，稍后工程师将尽快进行处理，感谢您的等待与理解。<img src="https://pro-cs-freq.udeskcs.com/icon/tid99781/mceclip2_1710123492549_lfelo.jpg" />`
+// func (d *Document) fix() {
+// 	htmlContent := `\n----------------------------------------\n<p>您好，如果确认问题解决，请您关闭工单，有其他问题，请再联系我们，感谢您的咨询与反馈，祝您生活愉快，再见。</p>\n----------------------------------------\n<p>zabbix普通用户执行的进程不属于TKE的任何容器组件，可以顺着进程号查询父进程是否是docker运行</p>\n----------------------------------------\n<p>您好，您的工单我们已做升级处理，我是本次为您服务的高级工程师，您的问题我这边正在处理当中，稍后为您同步进展，请您稍等。</p>\n----------------------------------------\n<p>您好，排查如图<img src="https://pro-cs-freq.udeskcs.com/icon/tid99781/mceclip0_1667978009817_qe6m6.png" width=\"451\" height=\"178\" />这边为您做升级处理</p>\n----------------------------------------\n<p>您好，您反馈的问题已经收到，这边先看下，请您稍等。</p>\n----------------------------------------\n<p>您好，您反馈的问题已分配任务给工程师，请您耐心等待，稍后工程师将尽快进行处理，感谢您的等待与理解。<img src="https://pro-cs-freq.udeskcs.com/icon/tid99781/mceclip2_1710123492549_lfelo.jpg" />`
 
-	html, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+// 	html, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		return
+// 	}
 
-	html.Find("img").Each(func(i int, s *goquery.Selection) {
-		src, _ := s.Attr("src")
-		img := img.NewImg(src, "../img_tmp_dir")
+// 	html.Find("img").Each(func(i int, s *goquery.Selection) {
+// 		src, _ := s.Attr("src")
+// 		img := img.NewImg(src, "../img_tmp_dir")
 
-		// 将img替换为confluence所识别的ac:image
-		newTag := fmt.Sprintf(`<ac:image><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
-		s.ReplaceWithHtml(newTag)
+// 		// 将img替换为confluence所识别的ac:image
+// 		newTag := fmt.Sprintf(`<ac:image><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
+// 		s.ReplaceWithHtml(newTag)
 
-		// 追加到img channel
-		d.Imgs <- img
-	})
-	close(d.Imgs)
-}
+// 		// 追加到img channel
+// 		d.Imgs = append(d.Imgs, img)
+// 	})
+// }
 
-type Document struct {
-	Imgs chan *img.Img
-}
+// func (d *Document) imgHander() {
+// 	if len(d.Imgs) != 0 {
+// 		for _, v := range d.Imgs {
+// 			Wg.Add(1)
+// 			go v.Download(&Wg)
+// 		}
+// 		Wg.Done()
+// }
+
+// type Document struct {
+// 	Imgs []*img.Img
+// }
+// }
