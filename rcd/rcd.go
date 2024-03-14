@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"s1mple/config"
+	"s1mple/pkg/config"
 	"s1mple/rcd/img"
 	"strings"
 	"text/template"

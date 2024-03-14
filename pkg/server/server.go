@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"s1mple/auth"
-	"s1mple/config"
+	"s1mple/pkg/auth"
+	"s1mple/pkg/config"
 	"s1mple/rcd"
 	"syscall"
 

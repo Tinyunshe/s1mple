@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 )
 
 // func main() {
@@ -179,5 +178,4 @@ func main() {
 		x = i
 	}
 	fmt.Println(x)
-	http.StatusOK
 }

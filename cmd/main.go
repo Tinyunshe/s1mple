@@ -1,8 +1,8 @@
 package main
 
 import (
-	"s1mple/config"
-	"s1mple/server"
+	"s1mple/pkg/config"
+	"s1mple/pkg/server"
 
 	"go.uber.org/zap"
 )

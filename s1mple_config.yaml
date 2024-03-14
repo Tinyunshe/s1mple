@@ -2,6 +2,8 @@ releaseConfluenceDocument:
   documentImgDirectory: "../img_tmp_dir"
   gotemplatePath: "../doc_go_template.txt"
   confluenceSpec:
+    timeout: 5
+    retryCount: 2
     url: "http://192.168.143.145:31871"
     # url: "https://confluence.alauda.cn"
     parts:
