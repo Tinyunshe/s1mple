@@ -34,9 +34,18 @@ type Document struct {
 	Logger        *zap.Logger    `json:",omitempty"`
 }
 
-// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
-func (d *Document) fixAssignee() string {
-	return fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
+// 判断工单受理人决定使用的token,发布到对应受理人的confluence
+func (d *Document) identifyReleaserToken() error {
+	for _, v := range d.Config.ConfluenceSpec.Parts {
+		if v.Username == d.AssigneeEmail {
+			d.ReleaserToken = v.Token
+			d.Logger.Info("Current document user is", zap.String("user", d.AssigneeEmail))
+			return nil
+		}
+	}
+	err := errors.New("")
+	d.Logger.Error("Do not Identify any user", zap.Error(err))
+	return err
 }
 
 // commentsHandler分为3个部分
@@ -61,7 +70,7 @@ func (d *Document) commentsHandler() error {
 
 			// 初始化img对象，传入存放img文件的目录
 			img := img.NewImg(src, d.Config.DocumentImgDirectory)
-			d.Logger.Info("find img", zap.Any("", img))
+			d.Logger.Info("Find img", zap.Any("", img))
 			// 将img替换为confluence所识别的ac:image
 			newTag := fmt.Sprintf(`<ac:image><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
 			s.ReplaceWithHtml(newTag)
@@ -76,6 +85,7 @@ func (d *Document) commentsHandler() error {
 		}
 		d.Comments = replaceImgAfterHtml
 	}
+	d.Logger.Info("Not find img")
 	return nil
 }
 
@@ -168,13 +178,6 @@ func (d *Document) release(documentHtmlContent string) error {
 		return err
 	}
 
-	// 判断工单受理人决定使用的token,发布到对应受理人的confluence
-	for _, v := range d.Config.ConfluenceSpec.Parts {
-		if v.Username == d.AssigneeEmail {
-			d.ReleaserToken = v.Token
-		}
-	}
-
 	// 声明发布到confluence请求的更多数据
 	url := d.Config.ConfluenceUrl + "/rest/api/content"
 	req, err := http.NewRequest(http.MethodPost, url, payload)
@@ -227,15 +230,17 @@ func (d *Document) release(documentHtmlContent string) error {
 // img处理
 func (d *Document) imgHander() {
 	for i := 0; i < len(d.Imgs); i++ {
+
 		go func(this int) {
 			done := make(chan bool)
 			go func() {
 				d.Imgs[this].Download(done)
 			}()
 			go func() {
-				d.Imgs[this].Upload(d.Config.ConfluenceUrl, d.PageId, d.ReleaserToken, done)
+				d.Imgs[this].Upload(d.Config.ConfluenceUrl, d.PageId, d.ReleaserToken, d.Config.HttpClient, d.Config.RetryCount, done)
 			}()
 		}(i)
+
 	}
 }
 
@@ -254,8 +259,13 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 		return nil, err
 	}
 
-	// 获取正确的Assignee名称
-	d.Assignee = d.fixAssignee()
+	// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
+	d.Assignee = fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
+
+	err := d.identifyReleaserToken()
+	if err != nil {
+		return nil, err
+	}
 
 	d.Logger.Info("New document success")
 	return d, nil
@@ -272,28 +282,28 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 
 	doc, err := newDocument(r, config, logger)
 	if err != nil {
-		doc.Logger.Error("", zap.Error(err))
+		logger.Error("", zap.Error(err))
 		http.Error(w, "Error create document", http.StatusBadRequest)
 		return
 	}
 
 	err = doc.commentsHandler()
 	if err != nil {
-		doc.Logger.Error("", zap.Error(err))
+		logger.Error("", zap.Error(err))
 		http.Error(w, "Error fix document comments", http.StatusBadRequest)
 		return
 	}
 
 	documentHtmlContent, err := doc.render()
 	if err != nil {
-		doc.Logger.Error("", zap.Error(err))
+		logger.Error("", zap.Error(err))
 		http.Error(w, "Error render document", http.StatusBadRequest)
 		return
 	}
 
 	err = doc.release(documentHtmlContent)
 	if err != nil {
-		doc.Logger.Error("", zap.Error(err))
+		logger.Error("", zap.Error(err))
 		http.Error(w, "Error release document", http.StatusBadRequest)
 		return
 	}
