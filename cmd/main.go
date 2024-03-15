@@ -19,6 +19,6 @@ func main() {
 	}
 	defer logger.Sync()
 
-	app := server.Server{Config: config, Logger: logger}
+	app := server.NewServer(config, logger)
 	app.Run()
 }
