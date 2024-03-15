@@ -20,4 +20,6 @@
 
 编译：
 
+docker build -t tinyunshe/s1mple:$(date +%s) .   && docker image ls
+
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o s1mple
