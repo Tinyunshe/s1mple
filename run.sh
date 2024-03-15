@@ -1,0 +1,2 @@
+docker container rm -f s1mple
+docker run -itd --name s1mple -p 8081:8080 -v ./s1mple_config_prod.yaml:/opt/s1mple_config.yaml -v ./doc_go_template.txt:/opt/doc_go_template.txt $1 --config /opt/s1mple_config.yaml
