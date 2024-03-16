@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-var (
+const (
 	adminUsername     = "admin"
 	adminUserPassword = "1qazXSW@"
 )

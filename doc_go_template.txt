@@ -6,7 +6,7 @@
 <p>适用版本：ACP {{.Version}}</p>
 <p>关键词：</p></ac:rich-text-body></ac:structured-macro>
 <h2>问题概述</h2>
-<p><span style="color: rgb(0,0,0);">{{.Content}}</span></p>
+<p><span style="color: rgb(0,0,0);">{{.Content}}{{.ContentAttachments}}</span></p>
 <p><br /></p>
 <h2>诊断步骤</h2>
 <p>{{.Comments}}</p>

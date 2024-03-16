@@ -90,7 +90,7 @@ func (s *Server) rcdCleanImgs() {
 			return nil
 		})
 		if err != nil {
-			s.Logger.Error("clean img file walk error", zap.Error(err))
+			s.Logger.Error("Error clean img file walk", zap.Error(err))
 			return
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -26,7 +27,9 @@ var (
 
 // 从httpaddress中分离img名称
 func splitName(addr string) string {
-	splitStr := strings.Split(addr, "/")
+	u, _ := url.Parse(addr)
+	u.RawQuery = ""
+	splitStr := strings.Split(u.String(), "/")
 	return splitStr[len(splitStr)-1]
 }
 
