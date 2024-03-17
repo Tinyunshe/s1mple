@@ -34,8 +34,13 @@ func splitName(addr string) string {
 }
 
 // 下载img
-func (i *Img) Download(done chan<- bool) {
-	resp, err := http.Get(i.HttpAddress)
+func (i *Img) Download(client *http.Client, done chan<- bool) {
+	req, err := http.NewRequest(http.MethodGet, i.HttpAddress, nil)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return

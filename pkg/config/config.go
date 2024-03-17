@@ -3,9 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
-	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -33,8 +31,6 @@ type ConfluenceSpec struct {
 	Timeout int `yaml:"timeout,omitempty"`
 	// 重试次数，默认2
 	RetryCount int `yaml:"retryCount,omitempty"`
-	// 请求confluence的http client
-	HttpClient *http.Client `yaml:",omitempty"`
 }
 
 type ConfluenceUser struct {
@@ -44,15 +40,13 @@ type ConfluenceUser struct {
 	Token    string `yaml:"token"`
 }
 
-func (c *Config) initConfluenceHttpClient() {
-	if c.ConfluenceSpec.Timeout == 0 {
-		c.ConfluenceSpec.Timeout = 10
+// default args
+func (config *Config) defaultValue() {
+	if config.ConfluenceSpec.Timeout == 0 {
+		config.ConfluenceSpec.Timeout = 10
 	}
-	if c.ConfluenceSpec.RetryCount == 0 {
-		c.ConfluenceSpec.RetryCount = 2
-	}
-	c.ConfluenceSpec.HttpClient = &http.Client{
-		Timeout: time.Duration(c.ConfluenceSpec.Timeout) * time.Second,
+	if config.ConfluenceSpec.RetryCount == 0 {
+		config.ConfluenceSpec.RetryCount = 2
 	}
 }
 
@@ -79,8 +73,8 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf(err.Error())
 	}
 
-	// 初始化请求confluence的http client
-	config.initConfluenceHttpClient()
+	// 初始化default args
+	config.defaultValue()
 
 	return config, nil
 }
