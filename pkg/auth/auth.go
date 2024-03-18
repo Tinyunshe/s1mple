@@ -8,7 +8,6 @@ import (
 
 const (
 	adminUsername = "admin"
-	// adminUserPassword = "1qazXSW@"
 	adminUserPassword = "TZqg!@#$%^tq88x"
 )
 

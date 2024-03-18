@@ -29,7 +29,6 @@ type Document struct {
 	Content            string         `json:"content"`
 	ContentAttachments string         `json:"contentAttachments"`
 	Comments           string         `json:"comments"`
-	Assignee           string         `json:"assignee,omitempty"`
 	PageId             string         `json:",omitempty"`
 	ReleaserToken      string         `json:",omitempty"`
 	ImgChan            chan *img.Img  `json:",omitempty"`
@@ -37,6 +36,11 @@ type Document struct {
 	Logger             *zap.Logger    `json:",omitempty"`
 	HttpClient         *http.Client   `json:",omitempty"`
 }
+
+const (
+	releaseSpace       = "ROTC"
+	releaseChildPageId = "196903982"
+)
 
 // 判断工单受理人决定使用的token,发布到对应受理人的confluence
 func (d *Document) identifyReleaserToken() error {
@@ -76,6 +80,9 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 		Space struct {
 			Key string `json:"key"`
 		} `json:"space"`
+		Ancestors []struct {
+			Id string `json:"id"`
+		} `json:"ancestors"`
 		Body struct {
 			Storage struct {
 				Value          string `json:"value"`
@@ -87,7 +94,12 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 		Type:  "page",
 		Space: struct {
 			Key string "json:\"key\""
-		}{"~" + d.Assignee},
+		}{releaseSpace},
+		Ancestors: []struct {
+			Id string "json:\"id\""
+		}{
+			{Id: releaseChildPageId},
+		},
 		Body: struct {
 			Storage struct {
 				Value          string "json:\"value\""
@@ -231,9 +243,6 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 		return nil, err
 	}
 
-	// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
-	d.Assignee = fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
-
 	// 处理产品分类的字符串
 	d.ProductClass = strings.Replace(d.ProductClass, ",", "-", -1)
 
@@ -249,8 +258,8 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	// 初始化img channel，默认允许工单中出现50个img
 	d.ImgChan = make(chan *img.Img, 50)
 
-	d.Logger.Info("New document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("assignee", d.Assignee))
-	d.Logger.Debug("Debug new document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("assignee", d.Assignee), zap.String("comments", d.Comments), zap.String("content", d.Content))
+	d.Logger.Info("New document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject))
+	d.Logger.Debug("Debug new document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("comments", d.Comments), zap.String("content", d.Content))
 	return d, nil
 }
 
