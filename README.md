@@ -22,6 +22,8 @@
 
 ~~12、故障文档标题格式修改，举例：容器平台-网络-问题标题-cloudId~~
 
+13、从工单系统获取 宏 ，删除工单回复中有 宏 的内容
+
 编译：
 
 docker build -t tinyunshe/s1mple:$(date +%s) .   && docker image ls
