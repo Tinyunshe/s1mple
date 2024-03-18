@@ -249,7 +249,7 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	d.ImgChan = make(chan *img.Img, 50)
 
 	d.Logger.Info("New document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("assignee", d.Assignee))
-	d.Logger.Debug("Debug new document success", zap.Any("", d))
+	d.Logger.Debug("Debug new document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("assignee", d.Assignee), zap.String("comments", d.Comments), zap.String("content", d.Content))
 	return d, nil
 }
 
