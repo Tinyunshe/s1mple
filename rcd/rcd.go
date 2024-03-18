@@ -31,7 +31,7 @@ type Document struct {
 	Assignee           string         `json:"assignee,omitempty"`
 	PageId             string         `json:",omitempty"`
 	ReleaserToken      string         `json:",omitempty"`
-	Imgs               chan *img.Img  `json:",omitempty"`
+	ImgChan            chan *img.Img  `json:",omitempty"`
 	Config             *config.Config `json:",omitempty"`
 	Logger             *zap.Logger    `json:",omitempty"`
 	HttpClient         *http.Client   `json:",omitempty"`
@@ -191,24 +191,18 @@ func (d *Document) release(documentHtmlContent *string) error {
 }
 
 // 并发下载与上传img
-func parallelIMGProcess(d *Document, logger *zap.Logger) {
-	imgSlice := make([]*img.Img, 0)
-	for v := range d.Imgs {
-		imgSlice = append(imgSlice, v)
-	}
-	if len(imgSlice) != 0 {
-		for i := 0; i < len(imgSlice); i++ {
-
-			go func(this int) {
-				done := make(chan bool)
-				go func() {
-					imgSlice[this].Download(d.HttpClient, done)
-				}()
-				go func() {
-					imgSlice[this].Upload(d.Config.ConfluenceUrl, d.PageId, d.ReleaserToken, d.HttpClient, d.Config.RetryCount, done)
-				}()
-			}(i)
-
+func parallelIMGProcess(d *Document) {
+	num := len(d.ImgChan)
+	if num != 0 {
+		for i := range d.ImgChan {
+			this := i
+			done := make(chan bool)
+			go func() {
+				this.Download(d.HttpClient, done)
+			}()
+			go func() {
+				this.Upload(d.Config.ConfluenceUrl, d.PageId, d.ReleaserToken, d.HttpClient, d.Config.RetryCount, done)
+			}()
 		}
 	} else {
 		d.Logger.Info("No exisit img", zap.String("PageId", d.PageId))
@@ -243,7 +237,7 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 		return nil, err
 	}
 
-	d.Imgs = make(chan *img.Img, 20)
+	d.ImgChan = make(chan *img.Img, 50)
 
 	d.Logger.Info("New document success")
 	return d, nil
@@ -258,38 +252,35 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
-	doc, err := newDocument(r, config, logger)
+	d, err := newDocument(r, config, logger)
 	if err != nil {
 		logger.Error("", zap.Error(err))
 		http.Error(w, "Error create document", http.StatusBadRequest)
 		return
 	}
 
-	documentAfterRender, err := doc.render()
+	documentAfterRender, err := d.render()
 	if err != nil {
 		logger.Error("", zap.Error(err))
 		http.Error(w, "Error render document", http.StatusBadRequest)
 		return
 	}
-	fmt.Println("++++++++++++++++++++++", *documentAfterRender)
 
-	documentAfterHtmlHandler, err := adorn.Execute(documentAfterRender, doc.Imgs, config, logger)
+	documentAfterHtmlHandler, err := adorn.Execute(documentAfterRender, d.ImgChan, config, logger)
 	if err != nil {
 		logger.Error("", zap.Error(err))
 		http.Error(w, "Error adorn document", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Println("==========================", *documentAfterHtmlHandler)
-
-	err = doc.release(documentAfterHtmlHandler)
+	err = d.release(documentAfterHtmlHandler)
 	if err != nil {
 		logger.Error("", zap.Error(err))
 		http.Error(w, "Error release document", http.StatusBadRequest)
 		return
 	}
 
-	parallelIMGProcess(doc, logger)
+	parallelIMGProcess(d)
 
 	w.Write([]byte("ok"))
 }

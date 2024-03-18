@@ -9,7 +9,7 @@ import (
 	"s1mple/pkg/auth"
 	"s1mple/pkg/config"
 	"s1mple/rcd"
-	"strings"
+	"s1mple/rcd/img"
 	"syscall"
 	"time"
 
@@ -21,7 +21,6 @@ type Server struct {
 	Logger                 *zap.Logger
 	rcdCleanImgsTickerTime time.Duration
 	rcdCleanImgsFileCycle  time.Duration
-	rcdCleanImgsFileType   []string
 }
 
 // 加载需要注册的URL
@@ -49,23 +48,12 @@ func (s *Server) rcdCleanImgs() {
 	// 每 1分钟，遍历存放目录下 以图片格式结尾的文件
 	// 并且 文件创建时间 超过 30秒 的
 	// 删除掉
-	s.rcdCleanImgsTickerTime = 1 * time.Minute
-	s.rcdCleanImgsFileCycle = 30 * time.Second
-	s.rcdCleanImgsFileType = []string{".jpg", ".png", ".gif", ".ico", ".svg", ".jpeg", ".pdf"}
+	s.rcdCleanImgsTickerTime = 30 * time.Minute
+	s.rcdCleanImgsFileCycle = 1 * time.Minute
 
 	// 初始化定时器
 	ticker := time.NewTicker(s.rcdCleanImgsTickerTime)
 	defer ticker.Stop()
-
-	// 定义筛选文件后缀的函数
-	hasImgExtension := func(name string) bool {
-		for _, v := range s.rcdCleanImgsFileType {
-			if strings.HasSuffix(name, v) {
-				return true
-			}
-		}
-		return false
-	}
 
 	// 定义执行函数
 	cleanImgsFunc := func() {
@@ -74,7 +62,7 @@ func (s *Server) rcdCleanImgs() {
 				s.Logger.Error("Error clean img accessing file", zap.Error(err))
 				return err
 			}
-			if !info.IsDir() && hasImgExtension(file) {
+			if !info.IsDir() && img.HasImgFileType(file) {
 				createTime := info.ModTime()
 				if time.Since(createTime) > s.rcdCleanImgsFileCycle {
 					err := os.Remove(file)

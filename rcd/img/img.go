@@ -22,11 +22,12 @@ type Img struct {
 }
 
 var (
-	lock sync.Mutex
+	lock        sync.Mutex
+	ImgFileType = []string{".jpg", ".png", ".gif", ".ico", ".svg", ".jpeg", ".pdf"}
 )
 
 // 从httpaddress中分离img名称
-func splitName(addr string) string {
+func identifyName(addr string) string {
 	u, _ := url.Parse(addr)
 	u.RawQuery = ""
 	splitStr := strings.Split(u.String(), "/")
@@ -145,11 +146,26 @@ func (i *Img) Upload(cf string, pageId string, token string, client *http.Client
 	fmt.Println("upload success", status, i.LocalPath)
 }
 
+// 定义筛选文件后缀的函数
+func HasImgFileType(name string) bool {
+	for _, v := range ImgFileType {
+		if strings.HasSuffix(name, v) {
+			return true
+		}
+	}
+	return false
+}
+
 // 初始化Img对象
 func NewImg(address string, dir string) *Img {
-	return &Img{
-		HttpAddress: address,
-		Name:        splitName(address),
-		LocalPath:   fmt.Sprintf("%v/%v", dir, splitName(address)),
+	name := identifyName(address)
+	if HasImgFileType(name) {
+		return &Img{
+			HttpAddress: address,
+			Name:        name,
+			LocalPath:   fmt.Sprintf("%v/%v", dir, name),
+		}
+	} else {
+		return nil
 	}
 }
