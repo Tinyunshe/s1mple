@@ -20,6 +20,8 @@
 
 ~~11、附件是非图片格式的不进行下载和上传~~
 
+~~12、故障文档标题格式修改，举例：容器平台-网络-问题标题-cloudId~~
+
 编译：
 
 docker build -t tinyunshe/s1mple:$(date +%s) .   && docker image ls

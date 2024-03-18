@@ -23,6 +23,7 @@ type Document struct {
 	CloudId            string         `json:"cloudId"`
 	Jira               string         `json:"jira"`
 	Version            string         `json:"version"`
+	ProductClass       string         `json:"productClass"`
 	AssigneeEmail      string         `json:"assignee_email"`
 	Subject            string         `json:"subject"`
 	Content            string         `json:"content"`
@@ -81,7 +82,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 			} `json:"storage"`
 		} `json:"body"`
 	}{
-		Title: fmt.Sprintf(d.CloudId + "-" + d.Subject),
+		Title: fmt.Sprintf("%s-%s-%s", d.ProductClass, d.Subject, d.CloudId),
 		Type:  "page",
 		Space: struct {
 			Key string "json:\"key\""
@@ -215,10 +216,9 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	d := &Document{
 		Logger: logger,
 		Config: config,
-	}
-
-	d.HttpClient = &http.Client{
-		Timeout: time.Duration(d.Config.ConfluenceSpec.Timeout) * time.Second,
+		HttpClient: &http.Client{
+			Timeout: time.Duration(config.ConfluenceSpec.Timeout) * time.Second,
+		},
 	}
 
 	// 从body内将json解析
@@ -231,12 +231,19 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	// 处理工单处理人的名字，传入的是admin@alauda.io，返回admin
 	d.Assignee = fmt.Sprintf(strings.Split(d.AssigneeEmail, "@")[0])
 
+	// 处理产品分类的字符串
+	d.ProductClass = strings.Replace(d.ProductClass, ",", "-", -1)
+
+	// 处理版本中的“v”
+	d.Version = strings.Replace(d.Version, "v", "", -1)
+
 	// 确定发布者token
 	err := d.identifyReleaserToken()
 	if err != nil {
 		return nil, err
 	}
 
+	// 初始化img channel，默认允许工单中出现50个img
 	d.ImgChan = make(chan *img.Img, 50)
 
 	d.Logger.Info("New document success")

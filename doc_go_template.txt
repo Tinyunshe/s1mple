@@ -3,7 +3,7 @@
 <p><br /></p><ac:structured-macro ac:name="tip" ac:schema-version="1" ac:macro-id="c9a6c106-e08c-4cad-b451-9d21c17cace2"><ac:parameter ac:name="title">JIRA</ac:parameter><ac:rich-text-body>
 <p>Jira：{{.Jira}}</p></ac:rich-text-body></ac:structured-macro>
 <h2>环境信息</h2><ac:structured-macro ac:name="tip" ac:schema-version="1" ac:macro-id="5596f840-060e-4b43-807c-7a72e01ead43"><ac:rich-text-body>
-<p>适用版本：ACP {{.Version}}</p>
+<p>适用版本：{{.Version}}</p>
 <p>关键词：</p></ac:rich-text-body></ac:structured-macro>
 <h2>问题概述</h2>
 <p><span style="color: rgb(0,0,0);">{{.Content}}{{.ContentAttachments}}</span></p>
