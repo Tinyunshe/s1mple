@@ -102,6 +102,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 		d.Logger.Error("Error construct confluence release post body, json marshal error", zap.Error(err))
 		return nil, err
 	}
+	fmt.Println("===================", string(body))
 	d.Logger.Info("construct confluence release post body success")
 	return strings.NewReader(string(body)), nil
 }
