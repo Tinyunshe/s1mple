@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	adminUsername     = "admin"
-	adminUserPassword = "1qazXSW@"
+	adminUsername = "admin"
+	// adminUserPassword = "1qazXSW@"
+	adminUserPassword = "TZqg!@#$%^tq88x"
 )
 
 // 为http.HandlerFunc封装basic auth功能，并返回
