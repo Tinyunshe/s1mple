@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -11,6 +10,7 @@ import (
 type Config struct {
 	// 发布confluence文档功能配置
 	ReleaseConfluenceDocument `yaml:"releaseConfluenceDocument"`
+	LogLevel                  string `yaml:"logLevel,omitempty"`
 }
 
 type ReleaseConfluenceDocument struct {
@@ -48,33 +48,35 @@ func (config *Config) defaultValue() {
 	if config.ConfluenceSpec.RetryCount == 0 {
 		config.ConfluenceSpec.RetryCount = 2
 	}
+	if config.LogLevel == "" {
+		config.LogLevel = "info"
+	}
 }
 
-func NewConfig() (*Config, error) {
+func NewConfig() *Config {
 	// 声明flag名称,默认值,帮助提示,返回字符串指针
 	configPtr := flag.String("config", "", "path to config file")
 	// 解析命令行参数
 	flag.Parse()
 	// 检查是否提供了配置文件路径
 	if *configPtr == "" {
-		fmt.Println("Usage: s1mple --config /path/to/config.yaml")
-		os.Exit(1)
+		panic("Usage: s1mple --config /path/to/config.yaml")
 	}
 
 	// 声明config对象
 	config := &Config{}
 	file, err := os.Open(*configPtr)
 	if err != nil {
-		return nil, fmt.Errorf(err.Error())
+		panic(err)
 	}
 	yamlDecoder := yaml.NewDecoder(file)
 	err = yamlDecoder.Decode(config)
 	if err != nil {
-		return nil, fmt.Errorf(err.Error())
+		panic(err)
 	}
 
 	// 初始化default args
 	config.defaultValue()
 
-	return config, nil
+	return config
 }

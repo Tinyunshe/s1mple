@@ -1,3 +1,4 @@
+logLevel: "debug"
 releaseConfluenceDocument:
   documentImgDirectory: "/opt/s1mple/imgs"
   gotemplatePath: "/opt/s1mple/doc_go_template.txt"

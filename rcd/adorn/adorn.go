@@ -92,5 +92,6 @@ func Execute(data *string, imgChan chan *img.Img, config *config.Config, logger 
 	}
 	a.text()
 	a.Logger.Info("Adorn success")
+	a.Logger.Debug("Debug adorn", zap.String("", *a.data))
 	return a.data, nil
 }

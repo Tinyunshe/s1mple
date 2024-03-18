@@ -102,8 +102,8 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 		d.Logger.Error("Error construct confluence release post body, json marshal error", zap.Error(err))
 		return nil, err
 	}
-	fmt.Println("===================", string(body))
 	d.Logger.Info("construct confluence release post body success")
+	d.Logger.Debug("Debug construct confluence release post body", zap.String("", string(body)))
 	return strings.NewReader(string(body)), nil
 }
 
@@ -131,6 +131,7 @@ func (d *Document) render() (*string, error) {
 	}
 	data := buf.String()
 	d.Logger.Info("Render document")
+	d.Logger.Debug("Debug render document", zap.String("", data))
 	return &data, nil
 }
 
@@ -182,7 +183,7 @@ func (d *Document) release(documentHtmlContent *string) error {
 			return err
 		}
 		resp.Body.Close()
-		d.Logger.Info("Release document success", zap.String("Respone confluence pageId", d.PageId), zap.String("Assignee", d.Assignee))
+		d.Logger.Info("Release document success", zap.String("Respone confluence pageId", d.PageId))
 		break
 	}
 	if !done {
@@ -247,7 +248,8 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	// 初始化img channel，默认允许工单中出现50个img
 	d.ImgChan = make(chan *img.Img, 50)
 
-	d.Logger.Info("New document success")
+	d.Logger.Info("New document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("assignee", d.Assignee))
+	d.Logger.Debug("Debug new document success", zap.Any("", d))
 	return d, nil
 }
 
