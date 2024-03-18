@@ -41,6 +41,7 @@ type Document struct {
 // 判断工单受理人决定使用的token,发布到对应受理人的confluence
 func (d *Document) identifyReleaserToken() error {
 	for _, v := range d.Config.ConfluenceSpec.Parts {
+		d.Logger.Debug("Debug parts have", zap.String("assigneeEmail", v.Username))
 		if v.Username == d.AssigneeEmail {
 			d.ReleaserToken = v.Token
 			d.Logger.Info("Current document user is", zap.String("user", d.AssigneeEmail))
@@ -48,7 +49,7 @@ func (d *Document) identifyReleaserToken() error {
 		}
 	}
 	err := errors.New("")
-	d.Logger.Error("Error Do not Identify any user", zap.Error(err))
+	d.Logger.Error("Error Do not Identify any assigneeEmail", zap.String("current assigneeEmail", d.AssigneeEmail), zap.Error(err))
 	return err
 }
 
