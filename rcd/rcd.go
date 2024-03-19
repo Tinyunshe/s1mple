@@ -24,7 +24,7 @@ type Document struct {
 	Jira               string         `json:"jira"`
 	Version            string         `json:"version"`
 	ProductClass       string         `json:"productClass"`
-	AssigneeEmail      string         `json:"assignee_email"`
+	AssigneeEmail      string         `json:"assigneeEmail"`
 	Subject            string         `json:"subject"`
 	Content            string         `json:"content"`
 	ContentAttachments string         `json:"contentAttachments"`
@@ -259,7 +259,7 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	d.ImgChan = make(chan *img.Img, 50)
 
 	d.Logger.Info("New document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject))
-	d.Logger.Debug("Debug new document success", zap.String("cloudId", d.CloudId), zap.String("subject", d.Subject), zap.String("comments", d.Comments), zap.String("content", d.Content))
+	d.Logger.Debug("Debug new document success", zap.String("cloudId", d.CloudId), zap.String("assigneeEmail", d.AssigneeEmail), zap.String("subject", d.Subject), zap.String("comments", d.Comments), zap.String("content", d.Content), zap.String("contentAttachments", d.ContentAttachments))
 	return d, nil
 }
 

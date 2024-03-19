@@ -48,8 +48,8 @@ func (a *Adorner) htmlTag(imgChan chan<- *img.Img) (*string, error) {
 					// 追加到imgs channel
 					imgChan <- img
 				} else {
-					// 否则不是一个img格式的文件就删掉tag
-					s.ReplaceWithHtml("")
+					// 否则不是一个img格式的文件就提示此处文字
+					s.ReplaceWithHtml("<在工单回复或者附件中,此处存在非图片格式的文件,确认后可以删除这段文字>")
 				}
 			})
 		} else {
@@ -80,6 +80,7 @@ func (a *Adorner) htmlTag(imgChan chan<- *img.Img) (*string, error) {
 // 修饰文本相关
 func (a *Adorner) text() {
 	*a.data = strings.Replace(*a.data, "----------------------------------------", "", -1)
+	*a.data = strings.Replace(*a.data, "<空>", "", -1)
 }
 
 func Execute(data *string, imgChan chan *img.Img, config *config.Config, logger *zap.Logger) (*string, error) {
