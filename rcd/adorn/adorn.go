@@ -80,7 +80,7 @@ func (a *Adorner) htmlTag(imgChan chan<- *img.Img) (*string, error) {
 // 修饰文本相关
 func (a *Adorner) text() {
 	*a.data = strings.Replace(*a.data, "----------------------------------------", "", -1)
-	*a.data = strings.Replace(*a.data, "<空>", "", -1)
+	*a.data = strings.Replace(*a.data, "&lt;空&gt;", "", -1)
 }
 
 func Execute(data *string, imgChan chan *img.Img, config *config.Config, logger *zap.Logger) (*string, error) {
