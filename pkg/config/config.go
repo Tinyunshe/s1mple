@@ -9,8 +9,8 @@ import (
 
 type Config struct {
 	// 发布confluence文档功能配置
-	ReleaseConfluenceDocument `yaml:"releaseConfluenceDocument"`
-	LogLevel                  string `yaml:"logLevel,omitempty"`
+	ReleaseConfluenceDocument ReleaseConfluenceDocument `yaml:"releaseConfluenceDocument"`
+	LogLevel                  string                    `yaml:"logLevel,omitempty"`
 }
 
 type ReleaseConfluenceDocument struct {
@@ -20,6 +20,12 @@ type ReleaseConfluenceDocument struct {
 	GotemplatePath string `yaml:"gotemplatePath"`
 	// html img临时存放的路径
 	DocumentImgDirectory string `yaml:"documentImgDirectory"`
+	// 发布到confluence的目标空间
+	ReleaseSpace string `yaml:"releaseSpace"`
+	// 发布到confluence目标空间的子页面id
+	ReleaseChildPageId string `yaml:"releaseChildPageId"`
+	// 需要清理掉的“宏”文字
+	Macros []string `yaml:"macros"`
 }
 
 type ConfluenceSpec struct {
@@ -42,11 +48,11 @@ type ConfluenceUser struct {
 
 // default args
 func (config *Config) defaultValue() {
-	if config.ConfluenceSpec.Timeout == 0 {
-		config.ConfluenceSpec.Timeout = 10
+	if config.ReleaseConfluenceDocument.Timeout == 0 {
+		config.ReleaseConfluenceDocument.Timeout = 10
 	}
-	if config.ConfluenceSpec.RetryCount == 0 {
-		config.ConfluenceSpec.RetryCount = 2
+	if config.ReleaseConfluenceDocument.ConfluenceSpec.RetryCount == 0 {
+		config.ReleaseConfluenceDocument.ConfluenceSpec.RetryCount = 2
 	}
 	if config.LogLevel == "" {
 		config.LogLevel = "info"

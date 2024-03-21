@@ -20,27 +20,22 @@ import (
 )
 
 type Document struct {
-	CloudId            string         `json:"cloudId"`
-	Jira               string         `json:"jira"`
-	Version            string         `json:"version"`
-	ProductClass       string         `json:"productClass"`
-	AssigneeEmail      string         `json:"assigneeEmail"`
-	Subject            string         `json:"subject"`
-	Content            string         `json:"content"`
-	ContentAttachments string         `json:"contentAttachments"`
-	Comments           string         `json:"comments"`
-	PageId             string         `json:",omitempty"`
-	ReleaserToken      string         `json:",omitempty"`
-	ImgChan            chan *img.Img  `json:",omitempty"`
-	Config             *config.Config `json:",omitempty"`
-	Logger             *zap.Logger    `json:",omitempty"`
-	HttpClient         *http.Client   `json:",omitempty"`
+	CloudId            string                            `json:"cloudId"`
+	Jira               string                            `json:"jira"`
+	Version            string                            `json:"version"`
+	ProductClass       string                            `json:"productClass"`
+	AssigneeEmail      string                            `json:"assigneeEmail"`
+	Subject            string                            `json:"subject"`
+	Content            string                            `json:"content"`
+	ContentAttachments string                            `json:"contentAttachments"`
+	Comments           string                            `json:"comments"`
+	PageId             string                            `json:",omitempty"`
+	ReleaserToken      string                            `json:",omitempty"`
+	ImgChan            chan *img.Img                     `json:",omitempty"`
+	Config             *config.ReleaseConfluenceDocument `json:",omitempty"`
+	Logger             *zap.Logger                       `json:",omitempty"`
+	HttpClient         *http.Client                      `json:",omitempty"`
 }
-
-const (
-	releaseSpace       = "ROTC"
-	releaseChildPageId = "196903982"
-)
 
 // 判断工单受理人决定使用的token,发布到对应受理人的confluence
 func (d *Document) identifyReleaserToken() error {
@@ -94,11 +89,11 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 		Type:  "page",
 		Space: struct {
 			Key string "json:\"key\""
-		}{releaseSpace},
+		}{d.Config.ReleaseSpace},
 		Ancestors: []struct {
 			Id string "json:\"id\""
 		}{
-			{Id: releaseChildPageId},
+			{Id: d.Config.ReleaseChildPageId},
 		},
 		Body: struct {
 			Storage struct {
@@ -230,24 +225,17 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	// 将config和logger传到document结构体中
 	d := &Document{
 		Logger: logger,
-		Config: config,
+		Config: &config.ReleaseConfluenceDocument,
 		HttpClient: &http.Client{
-			Timeout: time.Duration(config.ConfluenceSpec.Timeout) * time.Second,
+			Timeout: time.Duration(config.ReleaseConfluenceDocument.ConfluenceSpec.Timeout) * time.Second,
 		},
 	}
 
 	// 从body内将json解析
-	r.ParseForm()
 	if err := json.NewDecoder(r.Body).Decode(&d); err != nil {
 		d.Logger.Error("Error json decode", zap.Error(err))
 		return nil, err
 	}
-
-	// 处理产品分类的字符串
-	d.ProductClass = strings.Replace(d.ProductClass, ",", "-", -1)
-
-	// 处理版本中的“v”
-	d.Version = strings.Replace(d.Version, "v", "", -1)
 
 	// 确定发布者token
 	err := d.identifyReleaserToken()
@@ -279,6 +267,8 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
+	d.adorn()
+
 	documentAfterRender, err := d.render()
 	if err != nil {
 		logger.Error("", zap.Error(err))
@@ -286,14 +276,7 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 		return
 	}
 
-	documentAfterHtmlHandler, err := adorn.Execute(documentAfterRender, d.ImgChan, config, logger)
-	if err != nil {
-		logger.Error("", zap.Error(err))
-		http.Error(w, "Error adorn document", http.StatusBadRequest)
-		return
-	}
-
-	err = d.release(documentAfterHtmlHandler)
+	err = d.release(documentAfterRender)
 	if err != nil {
 		logger.Error("", zap.Error(err))
 		http.Error(w, "Error release document", http.StatusBadRequest)
@@ -303,4 +286,57 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 	parallelIMGProcess(d)
 
 	w.Write([]byte("ok"))
+}
+
+func (d *Document) adorn() {
+	// err := errors.New("")
+	a := adorn.NewAdorner(d.Logger)
+
+	// 处理产品分类的字符串
+	d.ProductClass = a.AdornProductClass(d.ProductClass)
+
+	// 处理版本中的“v”
+	d.Version = a.AdornVersion(d.Version)
+
+	// 处理<空>值
+	d.ContentAttachments = a.DeleteSpecialString(d.ContentAttachments)
+	d.Jira = a.DeleteSpecialString(d.Jira)
+
+	// 反转回复
+	d.Comments = a.ReverseComments(d.Comments)
+
+	// 删除“宏”
+	d.Comments = a.DeleteMacros(d.Comments, d.Config.Macros)
+
+	//lint:ignore SA4017 Ignore "New doesn't have side effects and its return value is ignored" warning
+	//lint:ignore SA4006 Ignore "this value of err is never used" warning
+	err := errors.New("")
+	d.Comments, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	d.Content, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	d.ContentAttachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.ImgChan)
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	// ImgTagHandler处理完后，要关闭ImgChan通道
+	close(d.ImgChan)
+
+	d.ContentAttachments, err = a.DeleteSpareHtmlTag("ul")
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	d.ContentAttachments, err = a.DeleteSpareHtmlTag("li")
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
 }
