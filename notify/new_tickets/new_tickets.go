@@ -1,15 +1,14 @@
-package review
+package newTickets
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"s1mple/pkg/config"
 
 	"go.uber.org/zap"
 )
 
-type Review struct {
+type NewTickets struct {
 	CloudId       string         `json:"cloudId"`
 	Subject       string         `json:"subject"`
 	AssigneeEmail string         `json:"assigneeEmail"`
@@ -18,30 +17,30 @@ type Review struct {
 	Logger        *zap.Logger    `json:",omitempty"`
 }
 
-func (r *Review) contentHandler() {
-
+func (n *NewTickets) ContentHandler() error {
+	return nil
 }
 
 // https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=93911e50-0447-425d-81ef-b4e4e00b1083
-func (r *Review) Send(body io.Reader) error {
+func (n *NewTickets) Send() error {
 	url := "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=693axxx6-7aoc-4bc4-97a0-0ec2sifa5aaa"
 	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
-		r.Logger.Error("", zap.Error(err))
+		n.Logger.Error("", zap.Error(err))
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := r.HttpClient.Do(req)
+	resp, err := n.HttpClient.Do(req)
 	if err != nil {
-		r.Logger.Error("", zap.Error(err))
+		n.Logger.Error("", zap.Error(err))
 		return err
 	}
 	defer resp.Body.Close()
 	return nil
 }
 
-func NewReview(req *http.Request, config *config.Config, logger *zap.Logger) (*Review, error) {
-	r := &Review{
+func NewNT(req *http.Request, config *config.Config, logger *zap.Logger) (*NewTickets, error) {
+	r := &NewTickets{
 		Config: config,
 		Logger: logger,
 	}

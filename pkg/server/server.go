@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"s1mple/notify"
+	newTickets "s1mple/notify/new_tickets"
 	"s1mple/pkg/auth"
 	"s1mple/pkg/config"
 	"s1mple/rcd"
@@ -30,7 +31,7 @@ func (s *Server) loadUrl() {
 	// http.HandeFunc的最终执行者在auth.BasicAuth函数中的next.ServeHTTP(w,r)
 	http.HandleFunc("/release_confluence_document", auth.BasicAuth(s.rcdHandler))
 	http.HandleFunc("/health", auth.BasicAuth(s.healthHandler))
-	http.HandleFunc("/notify/review", auth.BasicAuth(s.notifyHandler))
+	http.HandleFunc("/notify/new_tickets", auth.BasicAuth(s.notifyHandler))
 	http.HandleFunc("/notify/verificationcode", auth.BasicAuth(s.notifyHandler))
 	http.HandleFunc("/notify/auto_remind", auth.BasicAuth(s.notifyHandler))
 }
@@ -38,7 +39,12 @@ func (s *Server) loadUrl() {
 // 处理企微通知功能的闭包函数的功能入口
 func (s *Server) notifyHandler(w http.ResponseWriter, r *http.Request) {
 	func() {
-		notify.Notify(w, r, s.Config, s.Logger)
+		nt, err := newTickets.NewNT(r, s.Config, s.Logger)
+		if err != nil {
+			s.Logger.Error("", zap.Error(err))
+			return
+		}
+		notify.Notify(w, r, nt, s.Config, s.Logger)
 	}()
 }
 

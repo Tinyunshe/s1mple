@@ -9,12 +9,12 @@ import (
 )
 
 type Notifier interface {
-	contentHander() error
+	ContentHandler() error
 	Send() error
 }
 
 // 通知功能入口
-func Notify(w http.ResponseWriter, req *http.Request, config *config.Config, logger *zap.Logger) {
+func Notify(w http.ResponseWriter, req *http.Request, notifier Notifier, config *config.Config, logger *zap.Logger) {
 	defer req.Body.Close()
 
 	if req.Method != http.MethodPost {
@@ -22,7 +22,6 @@ func Notify(w http.ResponseWriter, req *http.Request, config *config.Config, log
 		return
 	}
 
-	var notifier Notifier
 	switch req.URL.Path {
 	case "/notify/review":
 		err := notifier.Send()
@@ -30,7 +29,7 @@ func Notify(w http.ResponseWriter, req *http.Request, config *config.Config, log
 			logger.Error("", zap.Error(err))
 			return
 		}
-		err = notifier.contentHander()
+		err = notifier.ContentHandler()
 		if err != nil {
 			logger.Error("", zap.Error(err))
 			return
@@ -41,7 +40,7 @@ func Notify(w http.ResponseWriter, req *http.Request, config *config.Config, log
 			logger.Error("", zap.Error(err))
 			return
 		}
-		err = notifier.contentHander()
+		err = notifier.ContentHandler()
 		if err != nil {
 			logger.Error("", zap.Error(err))
 			return
@@ -52,7 +51,7 @@ func Notify(w http.ResponseWriter, req *http.Request, config *config.Config, log
 			logger.Error("", zap.Error(err))
 			return
 		}
-		err = notifier.contentHander()
+		err = notifier.ContentHandler()
 		if err != nil {
 			logger.Error("", zap.Error(err))
 			return
@@ -63,7 +62,7 @@ func Notify(w http.ResponseWriter, req *http.Request, config *config.Config, log
 }
 
 func Entrances(notifier Notifier) {
-	err := notifier.contentHander()
+	err := notifier.ContentHandler()
 	if err != nil {
 		fmt.Println(err)
 	}
