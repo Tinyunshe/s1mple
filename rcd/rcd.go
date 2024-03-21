@@ -39,7 +39,7 @@ type Document struct {
 
 // 判断工单受理人决定使用的token,发布到对应受理人的confluence
 func (d *Document) identifyReleaserToken() error {
-	for _, v := range d.Config.ConfluenceSpec.Parts {
+	for _, v := range d.Config.Parts {
 		d.Logger.Debug("Debug parts have", zap.String("assigneeEmail", v.Username))
 		if v.Username == d.AssigneeEmail {
 			d.ReleaserToken = v.Token

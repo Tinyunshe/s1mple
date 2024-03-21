@@ -9,12 +9,12 @@ releaseConfluenceDocument:
     retryCount: 2
     url: "http://192.168.143.145:31871"
     # url: "https://confluence.alauda.cn"
-    parts:
-    - username: stwu@alauda.io
-      # token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
-      token: "NjMxOTQwNjQxNDkwOqDnS2dgE7gQ/dS62RhN8gg1L3L8"
-    - username: huiyang1@alauda.io
-      token: "NDE5NTI0ODAxMTMzOvFj/Fn/lSiKARc7aUslzB+ZfH5W"
+  parts:
+  - username: stwu@alauda.io
+    # token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
+    token: "NjMxOTQwNjQxNDkwOqDnS2dgE7gQ/dS62RhN8gg1L3L8"
+  - username: huiyang1@alauda.io
+    token: "NDE5NTI0ODAxMTMzOvFj/Fn/lSiKARc7aUslzB+ZfH5W"
   macros:
   - "您好，我们的客服已尝试就此问题联系您，但尚未收到您的回复，如需进一步帮助，请您及时联系我们，谢谢。"
   - "您好，您反馈的问题正在处理当中，有任何进展这边第一时间跟您同步，请您耐心等待，十分感谢。"

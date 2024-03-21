@@ -26,11 +26,11 @@ type ReleaseConfluenceDocument struct {
 	ReleaseChildPageId string `yaml:"releaseChildPageId"`
 	// 需要清理掉的“宏”文字
 	Macros []string `yaml:"macros"`
+	// confluence发布文档时对应的成员
+	Parts []ConfluenceUser `yaml:"parts"`
 }
 
 type ConfluenceSpec struct {
-	// confluence发布文档时对应的成员
-	Parts []ConfluenceUser `yaml:"parts"`
 	// confluence访问地址，http://xxx
 	ConfluenceUrl string `yaml:"url"`
 	// 请求confluence超时时间,默认10s
