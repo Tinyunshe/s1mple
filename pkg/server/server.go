@@ -69,7 +69,7 @@ func (s *Server) rcdCleanImgs() {
 
 	// 定义执行函数
 	cleanImgsFunc := func() {
-		err := filepath.Walk(s.Config.DocumentImgDirectory, func(file string, info os.FileInfo, err error) error {
+		err := filepath.Walk(s.Config.ReleaseConfluenceDocument.DocumentImgDirectory, func(file string, info os.FileInfo, err error) error {
 			if err != nil {
 				s.Logger.Error("Error clean img accessing file", zap.Error(err))
 				return err
@@ -105,16 +105,16 @@ func (s *Server) rcdCleanImgs() {
 
 // 创建img存放目录
 func (s *Server) rcdCreateImgDir() {
-	if _, err := os.Stat(s.Config.DocumentImgDirectory); os.IsNotExist(err) {
+	if _, err := os.Stat(s.Config.ReleaseConfluenceDocument.DocumentImgDirectory); os.IsNotExist(err) {
 		// 如果目录不存在，则创建它
-		err := os.MkdirAll(s.Config.DocumentImgDirectory, 0755) // 0755 是目录权限
+		err := os.MkdirAll(s.Config.ReleaseConfluenceDocument.DocumentImgDirectory, 0755) // 0755 是目录权限
 		if err != nil {
 			s.Logger.Error("", zap.Error(err))
 			panic("Error rcd create img directory")
 		}
-		s.Logger.Info("Create img directory", zap.String("", s.Config.DocumentImgDirectory))
+		s.Logger.Info("Create img directory", zap.String("", s.Config.ReleaseConfluenceDocument.DocumentImgDirectory))
 	} else {
-		s.Logger.Warn("Warning img directory exisit", zap.String("", s.Config.DocumentImgDirectory))
+		s.Logger.Warn("Warning img directory exisit", zap.String("", s.Config.ReleaseConfluenceDocument.DocumentImgDirectory))
 	}
 }
 
