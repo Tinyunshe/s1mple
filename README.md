@@ -36,12 +36,6 @@
 
 ~~17、重新组织adorn架构，将所有修饰字段的操作归纳到该package中~~
 
-14、将工单回复顺序反转
-
-15、去掉您好，你好，等开头字符
-
-16、发现文档中原始大小有点大，可以考虑将img大小调整到400 <ac:image ac:height="400"><ri:attachment ri:filename="mceclip3_1710839260755_l7lsg.png" /></ac:image> 
-
 # Notify
 
 ### Review
