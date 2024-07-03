@@ -41,7 +41,7 @@ type Document struct {
 func (d *Document) identifyReleaserToken() error {
 	for _, v := range d.Config.Parts {
 		d.Logger.Debug("Debug parts have", zap.String("assigneeEmail", v.Username))
-		if v.Username == d.AssigneeEmail {
+		if strings.Contains(d.AssigneeEmail, v.Username) {
 			d.ReleaserToken = v.Token
 			d.Logger.Info("Current document user is", zap.String("user", d.AssigneeEmail))
 			return nil
