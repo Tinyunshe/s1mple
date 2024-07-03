@@ -1,15 +1,34 @@
-logLevel: "info"
+logLevel: "debug"
 releaseConfluenceDocument:
   documentImgDirectory: "../img_tmp_dir"
   gotemplatePath: "../doc_go_template.txt"
+  releaseSpace: "~stwu"
+  releaseChildPageId: "188189300"
   confluenceSpec:
     timeout: 5
     retryCount: 2
     url: "http://192.168.143.145:31871"
     # url: "https://confluence.alauda.cn"
-    parts:
-    - username: stwu@alauda.io
-      # token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
-      token: "NjMxOTQwNjQxNDkwOqDnS2dgE7gQ/dS62RhN8gg1L3L8"
-    - username: huiyang1@alauda.io
-      token: "NDE5NTI0ODAxMTMzOvFj/Fn/lSiKARc7aUslzB+ZfH5W"
+  parts:
+  - username: stwu@alauda.io
+    # token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
+    token: "NjMxOTQwNjQxNDkwOqDnS2dgE7gQ/dS62RhN8gg1L3L8"
+  - username: huiyang1@alauda.io
+    token: "NDE5NTI0ODAxMTMzOvFj/Fn/lSiKARc7aUslzB+ZfH5W"
+  macros:
+  - "您好，我们的客服已尝试就此问题联系您，但尚未收到您的回复，如需进一步帮助，请您及时联系我们，谢谢。"
+  - "您好，您反馈的问题正在处理当中，有任何进展这边第一时间跟您同步，请您耐心等待，十分感谢。"
+  - "您好，您反馈的问题已分配任务给工程师，请您耐心等待，稍后工程师将尽快进行处理，感谢您的等待与理解。"
+  - "您好，您提出的这个问题，我们已向项目经理反馈，具体细节和进展，项目经理会与您沟通，麻烦您耐心等待，感谢您的咨询，祝您生活愉快，再见。"
+  - "您好，您反馈的问题这边确认下，稍后答复您，请您稍等。"
+  - "您好，您的问题，这边已经做升级处理，后端有回复这边会第一时间给您反馈，辛苦您耐心等待下，感谢您的理解。"
+  - "您好，您反馈的问题已经收到，这边先看下，请您稍等。"
+  - "您好，该问题的解决方案已反馈，烦请您验证下是否解决您的问题，如已解决，请您关闭工单，有任何问题可以随时再联系我们，感谢您的支持，祝您生活愉快，再见。"
+  - "您好，经过您的确认问题后已解决，工单可以关闭，如有其他问题，请您随时再联系我们，感谢您的支持，祝您生活愉快，再见！"
+  - "您好，经过项目经理确认，工单可以暂时关闭，有任何问题请您再联系我们，感谢您的支持，祝您生活愉快，再见！"
+  - "您好，您反馈的漏洞问题已收到，这边会与研发进行沟通确认，尽快给您答复，请您耐心等待，感谢您的理解！"
+  - "您好，您的工单我们已做升级处理，我是本次为您服务的高级工程师，您的问题我这边正在处理当中，稍后为您同步进展，请您稍等。"
+  - "您好，非常抱歉，当前工单处于排队处理状态，已与您沟通XX点处理该问题，感谢您的理解，请您耐心等待~"
+  - "如果确认问题解决，请您关闭工单，有其他问题，请再联系我们，感谢您的咨询与反馈，祝您生活愉快，再见。"
+  - "您好，"
+  - "你好，"
