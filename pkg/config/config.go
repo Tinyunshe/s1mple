@@ -24,6 +24,8 @@ type ReleaseConfluenceDocument struct {
 	ReleaseSpace string `yaml:"releaseSpace"`
 	// 发布到confluence目标空间的子页面id
 	ReleaseChildPageId string `yaml:"releaseChildPageId"`
+	// 页面label
+	PageLabels []string `yaml:"pageLabels"`
 	// 需要清理掉的“宏”文字
 	Macros []string `yaml:"macros"`
 	// confluence发布文档时对应的成员

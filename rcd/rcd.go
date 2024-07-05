@@ -143,7 +143,60 @@ func (d *Document) render() (*string, error) {
 	return &data, nil
 }
 
-// 传入文档,将文档发布到confluence,返回当前assignee在confluence的token
+func (d *Document) adorn() {
+	// err := errors.New("")
+	a := adorn.NewAdorner(d.Logger)
+
+	// 处理产品分类的字符串
+	d.ProductClass = a.AdornProductClass(d.ProductClass)
+
+	// 处理版本中的“v”
+	d.Version = a.AdornVersion(d.Version)
+
+	// 处理<空>值
+	d.ContentAttachments = a.DeleteSpecialString(d.ContentAttachments)
+	d.Jira = a.DeleteSpecialString(d.Jira)
+
+	// 反转回复
+	d.Comments = a.ReverseComments(d.Comments)
+
+	// 删除“宏”
+	d.Comments = a.DeleteMacros(d.Comments, d.Config.Macros)
+
+	//lint:ignore SA4017 Ignore "New doesn't have side effects and its return value is ignored" warning
+	//lint:ignore SA4006 Ignore "this value of err is never used" warning
+	err := errors.New("")
+	d.Comments, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	d.Content, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	d.ContentAttachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.ImgChan)
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	// ImgTagHandler处理完后，要关闭ImgChan通道
+	close(d.ImgChan)
+
+	d.ContentAttachments, err = a.DeleteSpareHtmlTag("ul")
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+	d.ContentAttachments, err = a.DeleteSpareHtmlTag("li")
+	if err != nil {
+		d.Logger.Error("", zap.Error(err))
+		return
+	}
+}
+
+// 传入文档,将文档发布到confluence,并打上页面的标签
 func (d *Document) release(documentHtmlContent *string) error {
 	// 通过对象构造body数据,返回reader
 	payload, err := d.constructReleaseBody(documentHtmlContent)
@@ -152,7 +205,7 @@ func (d *Document) release(documentHtmlContent *string) error {
 		return err
 	}
 
-	// 声明发布到confluence请求的更多数据
+	// 准备发布confluence请求的数据
 	url := d.Config.ConfluenceUrl + "/rest/api/content"
 	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
@@ -163,6 +216,7 @@ func (d *Document) release(documentHtmlContent *string) error {
 	req.Header.Set("Authorization", "Bearer "+d.ReleaserToken)
 	req.Header.Set("Connection", "keep-alive")
 
+	// 发布confluence文档
 	var done bool
 	for i := 0; i < d.Config.RetryCount; i++ {
 		done = true
@@ -182,6 +236,8 @@ func (d *Document) release(documentHtmlContent *string) error {
 			d.Logger.Error("Error respone code not 200", zap.Error(err))
 			return err
 		}
+		resp.Body.Close()
+
 		// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
 		d.PageId = gjson.Get(string(body), "id").String()
 		if d.PageId == "" {
@@ -190,13 +246,76 @@ func (d *Document) release(documentHtmlContent *string) error {
 			d.Logger.Error(msg, zap.Error(err))
 			return err
 		}
-		resp.Body.Close()
+
+		// 创建页面标签
+		err = d.createPageLabel()
+		if err != nil {
+			d.Logger.Error("Error create page label", zap.Error(err))
+			return err
+		}
+
 		d.Logger.Info("Release document success", zap.String("Respone confluence pageId", d.PageId))
 		break
 	}
 	if !done {
 		return errors.New("timeout")
 	}
+
+	return nil
+}
+
+// 创建页面page的label
+func (d *Document) createPageLabel() error {
+	/*
+		构造pageLabel请求体
+		[{"prefix":"global","name":"kb-troub"},{"prefix":"global","name":"test"}]
+	*/
+	type pageLabelBody struct {
+		Prefix string `json:"prefix"`
+		Name   string `json:"name"`
+	}
+
+	cpl := make([]pageLabelBody, 0)
+	for _, v := range d.Config.PageLabels {
+		data := pageLabelBody{Prefix: "global", Name: v}
+		cpl = append(cpl, data)
+	}
+	cplbody, err := json.Marshal(cpl)
+	if err != nil {
+		d.Logger.Error("Error createPageLabel json marshal", zap.Error(err))
+		return err
+	}
+	payload := strings.NewReader(string(cplbody))
+
+	// 准备请求content label接口
+	// 接口示例 https: //confluence.alauda.cn/rest/api/content/214860307/label
+	url := d.Config.ConfluenceUrl + "/rest/api/content/" + d.PageId + "/label"
+	req, err := http.NewRequest(http.MethodPost, url, payload)
+	if err != nil {
+		d.Logger.Error("Error create page label new request", zap.Error(err))
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+d.ReleaserToken)
+	req.Header.Set("Connection", "keep-alive")
+
+	// 创建标签
+	resp, err := d.HttpClient.Do(req)
+	if err != nil {
+		d.Logger.Error("Error create page label, http send failed", zap.Error(err))
+		return err
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		d.Logger.Error("Error create page label read respone body", zap.Error(err))
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err := errors.New(string(body))
+		d.Logger.Error("Error create page label respone code not 200", zap.Error(err))
+		return err
+	}
+	resp.Body.Close()
 
 	return nil
 }
@@ -286,57 +405,4 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 	parallelIMGProcess(d)
 
 	w.Write([]byte("ok"))
-}
-
-func (d *Document) adorn() {
-	// err := errors.New("")
-	a := adorn.NewAdorner(d.Logger)
-
-	// 处理产品分类的字符串
-	d.ProductClass = a.AdornProductClass(d.ProductClass)
-
-	// 处理版本中的“v”
-	d.Version = a.AdornVersion(d.Version)
-
-	// 处理<空>值
-	d.ContentAttachments = a.DeleteSpecialString(d.ContentAttachments)
-	d.Jira = a.DeleteSpecialString(d.Jira)
-
-	// 反转回复
-	d.Comments = a.ReverseComments(d.Comments)
-
-	// 删除“宏”
-	d.Comments = a.DeleteMacros(d.Comments, d.Config.Macros)
-
-	//lint:ignore SA4017 Ignore "New doesn't have side effects and its return value is ignored" warning
-	//lint:ignore SA4006 Ignore "this value of err is never used" warning
-	err := errors.New("")
-	d.Comments, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
-	d.Content, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
-	d.ContentAttachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.ImgChan)
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
-	// ImgTagHandler处理完后，要关闭ImgChan通道
-	close(d.ImgChan)
-
-	d.ContentAttachments, err = a.DeleteSpareHtmlTag("ul")
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
-	d.ContentAttachments, err = a.DeleteSpareHtmlTag("li")
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
 }
