@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"s1mple/notify"
+	newTickets "s1mple/notify/new_tickets"
 	"s1mple/pkg/auth"
 	"s1mple/pkg/config"
 	"s1mple/rcd"
@@ -29,11 +31,21 @@ func (s *Server) loadUrl() {
 	// http.HandeFunc的最终执行者在auth.BasicAuth函数中的next.ServeHTTP(w,r)
 	http.HandleFunc("/release_confluence_document", auth.BasicAuth(s.rcdHandler))
 	http.HandleFunc("/health", auth.BasicAuth(s.healthHandler))
+	http.HandleFunc("/notify/new_tickets", auth.BasicAuth(s.notifyHandler))
+	http.HandleFunc("/notify/verificationcode", auth.BasicAuth(s.notifyHandler))
+	http.HandleFunc("/notify/auto_remind", auth.BasicAuth(s.notifyHandler))
 }
 
-// health接口的处理
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "ok")
+// 处理企微通知功能的闭包函数的功能入口
+func (s *Server) notifyHandler(w http.ResponseWriter, r *http.Request) {
+	func() {
+		nt, err := newTickets.NewNT(r, s.Config, s.Logger)
+		if err != nil {
+			s.Logger.Error("", zap.Error(err))
+			return
+		}
+		notify.Notify(w, r, nt, s.Config, s.Logger)
+	}()
 }
 
 // 处理发布到confluence文档功能的闭包函数，作用是将外部的config属性传入到功能入口
@@ -115,6 +127,11 @@ func (s *Server) waitForShutdown() {
 
 	// 程序退出时刷新日志
 	s.Logger.Info("Shutting down server")
+}
+
+// health接口的处理
+func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "ok")
 }
 
 // server启动入口

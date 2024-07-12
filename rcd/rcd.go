@@ -55,11 +55,12 @@ func (d *Document) identifyReleaserToken() error {
 // 由于html格式字符串无法直接传到json中,需要创建对象去构造,并返回post请求需要的reader
 func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.Reader, error) {
 	/*
-		body 示例
+		创建页面的 body 示例
 				{
 				    "type": "page",
 				    "title": "hahaha",
-				    "space": {"key": "~stwu"},
+				    "space": {"key": "ROTC"},
+					"ancestors": {"id": "111"}
 				    "body": {
 				        "storage": {
 				            "value": "",
