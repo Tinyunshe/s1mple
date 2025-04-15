@@ -324,6 +324,36 @@ func (d *Document) createPageLabel() error {
 }
 
 func (d *Document) aiDocumentOrganization() error {
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"model": "deepseek-chat",
+		"messages": []map[string]string{
+			{
+				"role":    "system",
+				"content": d.Config.AISpec.AIDirectives,
+			},
+			{
+				"role":    "user",
+				"content": fmt.Sprintf("标题：%s,工单回复内容：%s", d.Subject, d.Content),
+			},
+		},
+	})
+
+	req, _ := http.NewRequest("POST", d.Config.AISpec.Url, bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+d.Config.AISpec.Token)
+
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	json.NewDecoder(resp.Body).Decode(&result)
 	return nil
 }
 
