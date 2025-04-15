@@ -8,6 +8,8 @@ releaseConfluenceDocument:
   gotemplatePath: "/opt/s1mple/doc_go_template.txt"
   releaseSpace: "ROTC"
   releaseChildPageId: "196903982"
+  pageLabels: 
+  - "kb-troubleshooting-article"
   macros:
   - "您好，我们的客服已尝试就此问题联系您，但尚未收到您的回复，如需进一步帮助，请您及时联系我们，谢谢。"
   - "您好，您反馈的问题正在处理当中，有任何进展这边第一时间跟您同步，请您耐心等待，十分感谢。"
@@ -42,4 +44,9 @@ releaseConfluenceDocument:
     token: "NTgyNjAwNjk1OTQxOksyF2vOW8VSE/2L/0hzWFW5Z59p"
   - username: aowang@alauda.io
     token: "MDMzNDQwNTA2MTE2OkX3prwwAc+9OFxemByeL01rbHwK"
+  - username: hywang@alauda.io
+    token: "MzM3NzI4Nzk1MTUzOllDIiXeQSVYRQPMcrvhfRRtVGQo"
+  - username: jqhuo@alauda.io
+    token: "Mzk0OTI1NDg3NzQ4OgeQRMA9SA3HBlSUveoqT7zKw8D3"
+
 
