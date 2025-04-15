@@ -29,6 +29,8 @@ type Document struct {
 	Content            string                            `json:"content"`
 	ContentAttachments string                            `json:"contentAttachments"`
 	Comments           string                            `json:"comments"`
+	AIContent_zh       string                            `json:",omitempty"`
+	AIContent_en       string                            `json:",omitempty"`
 	PageId             string                            `json:",omitempty"`
 	ReleaserToken      string                            `json:",omitempty"`
 	ImgChan            chan *img.Img                     `json:",omitempty"`
@@ -149,20 +151,20 @@ func (d *Document) adorn() {
 	a := adorn.NewAdorner(d.Logger)
 
 	// 处理产品分类的字符串
-	d.ProductClass = a.AdornProductClass(d.ProductClass)
+	// d.ProductClass = a.AdornProductClass(d.ProductClass)
 
 	// 处理版本中的“v”
-	d.Version = a.AdornVersion(d.Version)
+	// d.Version = a.AdornVersion(d.Version)
 
 	// 处理<空>值
 	d.ContentAttachments = a.DeleteSpecialString(d.ContentAttachments)
 	d.Jira = a.DeleteSpecialString(d.Jira)
 
 	// 反转回复
-	d.Comments = a.ReverseComments(d.Comments)
+	// d.Comments = a.ReverseComments(d.Comments)
 
 	// 删除“宏”
-	d.Comments = a.DeleteMacros(d.Comments, d.Config.Macros)
+	// d.Comments = a.DeleteMacros(d.Comments, d.Config.Macros)
 
 	//lint:ignore SA4017 Ignore "New doesn't have side effects and its return value is ignored" warning
 	//lint:ignore SA4006 Ignore "this value of err is never used" warning
@@ -185,16 +187,16 @@ func (d *Document) adorn() {
 	// ImgTagHandler处理完后，要关闭ImgChan通道
 	close(d.ImgChan)
 
-	d.ContentAttachments, err = a.DeleteSpareHtmlTag("ul")
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
-	d.ContentAttachments, err = a.DeleteSpareHtmlTag("li")
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
+	// d.ContentAttachments, err = a.DeleteSpareHtmlTag("ul")
+	// if err != nil {
+	// 	d.Logger.Error("", zap.Error(err))
+	// 	return
+	// }
+	// d.ContentAttachments, err = a.DeleteSpareHtmlTag("li")
+	// if err != nil {
+	// 	d.Logger.Error("", zap.Error(err))
+	// 	return
+	// }
 }
 
 // 传入文档,将文档发布到confluence,并打上页面的标签
@@ -321,6 +323,10 @@ func (d *Document) createPageLabel() error {
 	return nil
 }
 
+func (d *Document) aiDocumentOrganization() error {
+	return nil
+}
+
 // 并发下载与上传img
 func parallelIMGProcess(d *Document) {
 	num := len(d.ImgChan)
@@ -388,6 +394,13 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 	}
 
 	d.adorn()
+
+	err = d.aiDocumentOrganization()
+	if err != nil {
+		logger.Error("", zap.Error(err))
+		http.Error(w, "Error ai document organization", http.StatusBadRequest)
+		return
+	}
 
 	documentAfterRender, err := d.render()
 	if err != nil {

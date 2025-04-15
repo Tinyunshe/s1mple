@@ -30,6 +30,8 @@ type ReleaseConfluenceDocument struct {
 	Macros []string `yaml:"macros"`
 	// confluence发布文档时对应的成员
 	Parts []ConfluenceUser `yaml:"parts"`
+	// ai指令
+	AISpec `yaml:"ai"`
 }
 
 type ConfluenceSpec struct {
@@ -46,6 +48,12 @@ type ConfluenceUser struct {
 	// username:admin@alauda.io  /  token:xxxxxx
 	Username string `yaml:"username"`
 	Token    string `yaml:"token"`
+}
+
+type AISpec struct {
+	Url          string `yaml:"url"`
+	Token        string `yaml:"token"`
+	AIDirectives string `yaml:"aiDirectives"`
 }
 
 // default args

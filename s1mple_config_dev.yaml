@@ -32,3 +32,8 @@ releaseConfluenceDocument:
   - "如果确认问题解决，请您关闭工单，有其他问题，请再联系我们，感谢您的咨询与反馈，祝您生活愉快，再见。"
   - "您好，"
   - "你好，"
+  ai:
+    url: ""
+    token: ""
+    aiDirectives: |-
+      
