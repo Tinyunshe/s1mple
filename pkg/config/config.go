@@ -17,7 +17,7 @@ type ReleaseConfluenceDocument struct {
 	// 关于confluence的配置
 	ConfluenceSpec `yaml:"confluenceSpec"`
 	// 故障模版gotemplate的文件位置
-	GotemplatePath string `yaml:"gotemplatePath"`
+	GoTemplatePath `yaml:"goTemplatePath"`
 	// html img临时存放的路径
 	DocumentImgDirectory string `yaml:"documentImgDirectory"`
 	// 发布到confluence的目标空间
@@ -26,8 +26,6 @@ type ReleaseConfluenceDocument struct {
 	ReleaseChildPageId string `yaml:"releaseChildPageId"`
 	// 页面label
 	PageLabels []string `yaml:"pageLabels"`
-	// 需要清理掉的“宏”文字
-	Macros []string `yaml:"macros"`
 	// confluence发布文档时对应的成员
 	Parts []ConfluenceUser `yaml:"parts"`
 	// ai指令
@@ -48,6 +46,11 @@ type ConfluenceUser struct {
 	// username:admin@alauda.io  /  token:xxxxxx
 	Username string `yaml:"username"`
 	Token    string `yaml:"token"`
+}
+
+type GoTemplatePath struct {
+	En string `yaml:"en"`
+	Zh string `yaml:"zh"`
 }
 
 type AISpec struct {

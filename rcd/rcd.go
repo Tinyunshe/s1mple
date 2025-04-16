@@ -119,9 +119,9 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 }
 
 // 将Document中的所有字段数据 渲染到 -> 故障文档模板 ,返回的是html格式的大字符串,可理解为文档
-func (d *Document) render() (*string, error) {
+func (d *Document) render(goTemplatePath string) (*string, error) {
 	// 打开模板文件句柄
-	file, err := os.Open(d.Config.GotemplatePath)
+	file, err := os.Open(goTemplatePath)
 	if err != nil {
 		d.Logger.Error("Error render open file", zap.Error(err))
 		return nil, err
@@ -354,6 +354,9 @@ func (d *Document) aiDocumentOrganization() error {
 		} `json:"choices"`
 	}
 	json.NewDecoder(resp.Body).Decode(&result)
+	s := strings.Split(result.Choices[0].Message.Content, "---+++===")
+	d.AIContent_en = s[1]
+	d.AIContent_zh = s[0]
 	return nil
 }
 
