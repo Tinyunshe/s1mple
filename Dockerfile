@@ -22,5 +22,6 @@ FROM build-harbor.alauda.cn/ops/alpine:3.19
 
 COPY --from=builder  /workspace/s1mple /usr/local/bin
 RUN mkdir /opt/s1mple && chmod +x /usr/local/bin/s1mple
-COPY --from=builder /workspace/doc_go_template.txt /opt/s1mple/doc_go_template.txt
+COPY --from=builder /workspace/doc_go_template_zh.txt /opt/s1mple/doc_go_template_zh.txt
+COPY --from=builder /workspace/doc_go_template_en.txt /opt/s1mple/doc_go_template_en.txt
 ENTRYPOINT ["s1mple"]
