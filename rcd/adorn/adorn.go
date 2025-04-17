@@ -44,38 +44,32 @@ func (a *Adorner) ReverseComments(comments string) string {
 	return builder.String()
 }
 
-func (a *Adorner) ImgTagHandler(tag string, childtag string, imgdir string, imgChan chan<- *img.Img) (string, error) {
+func (a *Adorner) ImgTagHandler(tag string, childtag string, imgdir string, imgChan chan<- *img.Img) ([]string, error) {
 	// 如果找到的img长度不等于0，认为是存在img的
 	if a.htmlParser.Find(tag).Length() != 0 {
 		a.Logger.Info("Replace", zap.String("HtmlTag", tag))
-		// 否则存在img，则实例化Img对象传入img http地址和img本地存放的目录
-		a.htmlParser.Find(tag).Each(func(i int, s *goquery.Selection) {
-			c, _ := s.Attr(childtag)
+		files := make([]string, 0)
+		// 则实例化Img对象传入img http地址和img本地存放的目录
+		a.htmlParser.Find(tag).Each(
+			func(i int, s *goquery.Selection) {
+				c, _ := s.Attr(childtag)
 
-			// 初始化img对象，传入存放img文件的目录
-			img := img.NewImg(c, imgdir)
-			if img != nil {
-				a.Logger.Info("New img", zap.Any("", img))
-				// 将img替换为confluence所识别的ac:image
-				newTag := fmt.Sprintf(`<ac:image ac:height="400"><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
-				s.ReplaceWithHtml(newTag)
-
-				// 追加到imgs channel
-				imgChan <- img
-			} else {
-				// 否则不是一个img格式的文件就提示此处文字
-				s.ReplaceWithHtml("<在工单回复或者附件中,此处存在非图片格式的文件,确认后可以删除这段文字>")
-			}
-		})
+				// 初始化img对象，传入存放img文件的目录
+				img := img.NewImg(c, imgdir)
+				if img != nil {
+					a.Logger.Info("New img", zap.Any("", img))
+					// 将img替换为confluence所识别的ac:image
+					newTag := fmt.Sprintf(`<ac:image ac:height="400"><ri:attachment ri:filename="%v" /></ac:image>`, img.Name)
+					files = append(files, newTag)
+					// 追加到imgs channel
+					imgChan <- img
+				}
+			})
+		return files, nil
 	} else {
 		a.Logger.Info("", zap.String("No find img", tag))
+		return nil, nil
 	}
-	afterHtml, err := a.htmlParser.Html()
-	if err != nil {
-		a.Logger.Error("Error ImgTagHandler", zap.Error(err))
-		return "", err
-	}
-	return afterHtml, nil
 }
 
 func (a *Adorner) DeleteSpareHtmlTag(tag string) (string, error) {

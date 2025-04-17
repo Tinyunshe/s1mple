@@ -1,29 +1,34 @@
 logLevel: "debug"
 releaseConfluenceDocument:
   documentImgDirectory: "../img_tmp_dir"
-  gotemplatePath:
+  releaseSpace: "ROTC"
+  goTemplatePath:
     en: "../doc_go_template_en.txt"
     zh: "../doc_go_template_zh.txt"
-  releaseSpace: "ROTC"
-  releaseChildPageId: "196903982"
-  confluenceSpec:
+  releasePageId: 
+    zh: "196903982"
+    en: "277184887"
+  confluence:
     timeout: 5
     retryCount: 2
     # url: "http://192.168.143.145:31871"
     url: "https://confluence.alauda.cn"
+  pageLabels: 
+  - "kb-troubleshooting-article"
   parts:
   - username: stwu@alauda.io
     token: "NzI4NTU5OTQwODMzOlORfNckQcnu1SDEq0xCyGfu/JbJ"
   ai:
     url: "https://api.deepseek.com/v1/chat/completions"
-    token: ""
+    token: "sk-f6a9cd4472f448c3baa3edb71be0cea8"
     aiDirectives: |-
-      我将发送你一个标题和处理工单过程中的回复内容，请根据如下的要求将工单回复内容整理成一篇技术文档
-      要求1、文档格式要求4个大标题，“问题概述”，根据工单补充概述内容、“排查过程”，根据工单回复精选一些排查过程、“解决方法”，根据工单回复总结问题原因以及解决方法
-      要求2、请分别输出中文、英文两份文档
-      要求3、先输出中文文档再输出英文文档，对英文内容进行语法检查符合kubernetes技术阅读习惯符合英语阅读习惯，中文文档与英文文档开头不用说这是中文文档或者英文文档，直接输出文档内容就可以，中文文档与英文文档中间由"---+++==="分割
+      我将发送你一个工单标题、处理工单过程中的回复内容，请根据如下的要求将工单回复内容整理成一篇技术文档
+      要求1、文档格式要求3个大标题；“问题概述”，根据工单补充概述内容；“排查过程”，根据工单回复精选一些排查过程；“解决方法”，根据工单回复总结问题原因以及解决方法
+      要求2、文档格式要求是html数据格式，3个大标题文字是<h2></h2>包裹
+      要求2、请分别输出中文、英文两份文档，对英文内容进行语法检查符合kubernetes技术阅读习惯符合英语阅读习惯
+      要求3、先输出中文文档再输出英文文档，中文文档与英文文档的开头不要标注中文文档或者英文文档，直接输出文档内容就可以了
+      要求4、输出完中文文档后，用"---+++==="分割，然后将工单标题翻译成英语，用普通字符串输出，然后再用"---+++==="分割，之后输出英文文档
       要求4、不能有客户名称属性信息，数据脱敏
       要求5、不能出现 “灵雀云”、“ACP”、“TKE” 关键字
-      要求6、中文文档与英文文档末尾要标注“截图”，将工单回复中出现的类似<img src=\"https://pro-cs-freq.udeskcs.com/icon/tid99781/mceclip0_1710495066522_9g9og.png\" />的数据以html的<img>的格式标注在“截图”下，数据格式不要变
-      要求7、不能有链接到其他【内部知识库的链接】引用，不能有链接到任何需要公司内网访问的链接； 可以链接其他公网内容，比如链接某一处kubernetes官网文档地址
-      
+      要求6、不能有链接到其他【内部知识库的链接】引用，不能有链接到任何需要公司内网访问的链接； 可以链接其他公网内容，比如链接某一处kubernetes官网文档地址
+      请严格按以上要求进行输出

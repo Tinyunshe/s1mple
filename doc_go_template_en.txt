@@ -6,4 +6,12 @@
 <p>Applicable version：{{.Version}}</p>
 <p>Keywords：</p></ac:rich-text-body></ac:structured-macro>
 {{.AIContent_en}}
+<h2>Related screenshots</h2>
+{{ range .Screenshots}}
+{{ . }}
+{{ end }}
+<h2>Attachments</h2>
+{{ range .Attachments}}
+{{ . }}
+{{ end }}
 <p></p>

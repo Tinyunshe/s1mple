@@ -15,7 +15,7 @@ type Config struct {
 
 type ReleaseConfluenceDocument struct {
 	// 关于confluence的配置
-	ConfluenceSpec `yaml:"confluenceSpec"`
+	Confluence `yaml:"confluence"`
 	// 故障模版gotemplate的文件位置
 	GoTemplatePath `yaml:"goTemplatePath"`
 	// html img临时存放的路径
@@ -23,7 +23,7 @@ type ReleaseConfluenceDocument struct {
 	// 发布到confluence的目标空间
 	ReleaseSpace string `yaml:"releaseSpace"`
 	// 发布到confluence目标空间的子页面id
-	ReleaseChildPageId string `yaml:"releaseChildPageId"`
+	ReleasePageId `yaml:"releasePageId"`
 	// 页面label
 	PageLabels []string `yaml:"pageLabels"`
 	// confluence发布文档时对应的成员
@@ -32,7 +32,7 @@ type ReleaseConfluenceDocument struct {
 	AISpec `yaml:"ai"`
 }
 
-type ConfluenceSpec struct {
+type Confluence struct {
 	// confluence访问地址，http://xxx
 	ConfluenceUrl string `yaml:"url"`
 	// 请求confluence超时时间,默认10s
@@ -59,13 +59,18 @@ type AISpec struct {
 	AIDirectives string `yaml:"aiDirectives"`
 }
 
+type ReleasePageId struct {
+	En string `yaml:"en"`
+	Zh string `yaml:"zh"`
+}
+
 // default args
 func (config *Config) defaultValue() {
 	if config.ReleaseConfluenceDocument.Timeout == 0 {
 		config.ReleaseConfluenceDocument.Timeout = 10
 	}
-	if config.ReleaseConfluenceDocument.ConfluenceSpec.RetryCount == 0 {
-		config.ReleaseConfluenceDocument.ConfluenceSpec.RetryCount = 2
+	if config.ReleaseConfluenceDocument.Confluence.RetryCount == 0 {
+		config.ReleaseConfluenceDocument.Confluence.RetryCount = 2
 	}
 	if config.LogLevel == "" {
 		config.LogLevel = "info"

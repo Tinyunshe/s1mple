@@ -6,4 +6,12 @@
 <p>适用版本：{{.Version}}</p>
 <p>关键词：</p></ac:rich-text-body></ac:structured-macro>
 {{.AIContent_zh}}
+<h2>相关截图</h2>
+{{ range .Screenshots}}
+{{ . }}
+{{ end }}
+<h2>附件</h2>
+{{ range .Attachments}}
+{{ . }}
+{{ end }}
 <p></p>
