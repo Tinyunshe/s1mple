@@ -7,7 +7,7 @@ releaseConfluenceDocument:
     zh: "../doc_go_template_zh.txt"
   releasePageId: 
     zh: "196903982"
-    en: "277184887"
+    en: "277807582"
   confluence:
     timeout: 5
     retryCount: 2

@@ -178,17 +178,17 @@ func (d *Document) adorn() {
 	//lint:ignore SA4017 Ignore "New doesn't have side effects and its return value is ignored" warning
 	//lint:ignore SA4006 Ignore "this value of err is never used" warning
 	err := errors.New("")
-	d.Screenshots, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	d.Screenshots, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.Screenshots, d.ImgChan)
 	if err != nil {
 		d.Logger.Error("", zap.Error(err))
 		return
 	}
-	d.Screenshots, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	d.Screenshots, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.Screenshots, d.ImgChan)
 	if err != nil {
 		d.Logger.Error("", zap.Error(err))
 		return
 	}
-	d.Attachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.ImgChan)
+	d.Attachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.Attachments, d.ImgChan)
 	if err != nil {
 		d.Logger.Error("", zap.Error(err))
 		return

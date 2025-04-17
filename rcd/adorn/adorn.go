@@ -44,16 +44,14 @@ func (a *Adorner) ReverseComments(comments string) string {
 	return builder.String()
 }
 
-func (a *Adorner) ImgTagHandler(tag string, childtag string, imgdir string, imgChan chan<- *img.Img) ([]string, error) {
+func (a *Adorner) ImgTagHandler(tag string, childtag string, imgdir string, files []string, imgChan chan<- *img.Img) ([]string, error) {
 	// 如果找到的img长度不等于0，认为是存在img的
 	if a.htmlParser.Find(tag).Length() != 0 {
 		a.Logger.Info("Replace", zap.String("HtmlTag", tag))
-		files := make([]string, 0)
 		// 则实例化Img对象传入img http地址和img本地存放的目录
 		a.htmlParser.Find(tag).Each(
 			func(i int, s *goquery.Selection) {
 				c, _ := s.Attr(childtag)
-
 				// 初始化img对象，传入存放img文件的目录
 				img := img.NewImg(c, imgdir)
 				if img != nil {
@@ -68,7 +66,7 @@ func (a *Adorner) ImgTagHandler(tag string, childtag string, imgdir string, imgC
 		return files, nil
 	} else {
 		a.Logger.Info("", zap.String("No find img", tag))
-		return nil, nil
+		return files, nil
 	}
 }
 
