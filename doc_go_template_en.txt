@@ -1,0 +1,17 @@
+<p><br /></p>
+<p><span><ac:structured-macro ac:name="toc" ac:schema-version="1" ac:macro-id="a8160596-8ad0-4d7e-9a2a-62fa08bde400" /></span></p>
+<p><br /></p><ac:structured-macro ac:name="tip" ac:schema-version="1" ac:macro-id="c9a6c106-e08c-4cad-b451-9d21c17cace2"><ac:parameter ac:name="title">JIRA</ac:parameter><ac:rich-text-body>
+<p>Jira：{{.Jira}}</p></ac:rich-text-body></ac:structured-macro>
+<h2>Environmental information</h2><ac:structured-macro ac:name="tip" ac:schema-version="1" ac:macro-id="5596f840-060e-4b43-807c-7a72e01ead43"><ac:rich-text-body>
+<p>Applicable version：{{.Version}}</p>
+<p>Keywords：</p></ac:rich-text-body></ac:structured-macro>
+{{.AIContent_en}}
+<h2>Related screenshots</h2>
+{{ range .Screenshots}}
+{{ . }}
+{{ end }}
+<h2>Attachments</h2>
+{{ range .Attachments}}
+{{ . }}
+{{ end }}
+<p></p>

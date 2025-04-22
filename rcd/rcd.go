@@ -29,12 +29,22 @@ type Document struct {
 	Content            string                            `json:"content"`
 	ContentAttachments string                            `json:"contentAttachments"`
 	Comments           string                            `json:"comments"`
-	PageId             string                            `json:",omitempty"`
+	AIContent_zh       string                            `json:",omitempty"`
+	AIContent_en       string                            `json:",omitempty"`
+	Subject_en         string                            `json:",omitempty"`
+	PageIds            []string                          `json:",omitempty"`
 	ReleaserToken      string                            `json:",omitempty"`
 	ImgChan            chan *img.Img                     `json:",omitempty"`
+	Screenshots        []string                          `json:",omitempty"`
+	Attachments        []string                          `json:",omitempty"`
 	Config             *config.ReleaseConfluenceDocument `json:",omitempty"`
 	Logger             *zap.Logger                       `json:",omitempty"`
 	HttpClient         *http.Client                      `json:",omitempty"`
+}
+
+type Page struct {
+	Language string
+	PageId   string
 }
 
 // 判断工单受理人决定使用的token,发布到对应受理人的confluence
@@ -53,7 +63,17 @@ func (d *Document) identifyReleaserToken() error {
 }
 
 // 由于html格式字符串无法直接传到json中,需要创建对象去构造,并返回post请求需要的reader
-func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.Reader, error) {
+func (d *Document) constructReleaseBody(documentHtmlContent *string, page *Page) (*strings.Reader, error) {
+	subject := ""
+	switch page.Language {
+	case "zh":
+		subject = d.Subject
+	case "en":
+		subject = d.Subject_en
+	default:
+		err := errors.New("not found language")
+		return nil, err
+	}
 	/*
 		创建页面的 body 示例
 				{
@@ -86,7 +106,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 			} `json:"storage"`
 		} `json:"body"`
 	}{
-		Title: fmt.Sprintf("%s-%s-%s", d.ProductClass, d.Subject, d.CloudId),
+		Title: fmt.Sprintf("%s-%s-%s-%s", d.ProductClass, subject, d.CloudId, page.Language),
 		Type:  "page",
 		Space: struct {
 			Key string "json:\"key\""
@@ -94,7 +114,7 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 		Ancestors: []struct {
 			Id string "json:\"id\""
 		}{
-			{Id: d.Config.ReleaseChildPageId},
+			{Id: page.PageId},
 		},
 		Body: struct {
 			Storage struct {
@@ -117,9 +137,9 @@ func (d *Document) constructReleaseBody(documentHtmlContent *string) (*strings.R
 }
 
 // 将Document中的所有字段数据 渲染到 -> 故障文档模板 ,返回的是html格式的大字符串,可理解为文档
-func (d *Document) render() (*string, error) {
+func (d *Document) render(goTemplatePath string) (*string, error) {
 	// 打开模板文件句柄
-	file, err := os.Open(d.Config.GotemplatePath)
+	file, err := os.Open(goTemplatePath)
 	if err != nil {
 		d.Logger.Error("Error render open file", zap.Error(err))
 		return nil, err
@@ -144,63 +164,44 @@ func (d *Document) render() (*string, error) {
 	return &data, nil
 }
 
+// 主要处理工单中涉及到的截图和附件，其次处理工单中出现的特殊内容
 func (d *Document) adorn() {
 	// err := errors.New("")
 	a := adorn.NewAdorner(d.Logger)
-
-	// 处理产品分类的字符串
-	d.ProductClass = a.AdornProductClass(d.ProductClass)
-
-	// 处理版本中的“v”
-	d.Version = a.AdornVersion(d.Version)
 
 	// 处理<空>值
 	d.ContentAttachments = a.DeleteSpecialString(d.ContentAttachments)
 	d.Jira = a.DeleteSpecialString(d.Jira)
 
-	// 反转回复
-	d.Comments = a.ReverseComments(d.Comments)
-
-	// 删除“宏”
-	d.Comments = a.DeleteMacros(d.Comments, d.Config.Macros)
-
+	// 处理工单中出现的截图
+	// 将replace为confluence所识别的img格式后，再将html标签追加到文档属性中做文档中相关截图的展示
 	//lint:ignore SA4017 Ignore "New doesn't have side effects and its return value is ignored" warning
 	//lint:ignore SA4006 Ignore "this value of err is never used" warning
 	err := errors.New("")
-	d.Comments, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	d.Screenshots, err = a.Execute(&d.Comments).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.Screenshots, d.ImgChan)
 	if err != nil {
 		d.Logger.Error("", zap.Error(err))
 		return
 	}
-	d.Content, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.ImgChan)
+	d.Screenshots, err = a.Execute(&d.Content).ImgTagHandler("img", "src", d.Config.DocumentImgDirectory, d.Screenshots, d.ImgChan)
 	if err != nil {
 		d.Logger.Error("", zap.Error(err))
 		return
 	}
-	d.ContentAttachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.ImgChan)
+	d.Attachments, err = a.Execute(&d.ContentAttachments).ImgTagHandler("a", "href", d.Config.DocumentImgDirectory, d.Attachments, d.ImgChan)
 	if err != nil {
 		d.Logger.Error("", zap.Error(err))
 		return
 	}
+	fmt.Println(d.Screenshots, d.Attachments)
 	// ImgTagHandler处理完后，要关闭ImgChan通道
 	close(d.ImgChan)
-
-	d.ContentAttachments, err = a.DeleteSpareHtmlTag("ul")
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
-	d.ContentAttachments, err = a.DeleteSpareHtmlTag("li")
-	if err != nil {
-		d.Logger.Error("", zap.Error(err))
-		return
-	}
 }
 
 // 传入文档,将文档发布到confluence,并打上页面的标签
-func (d *Document) release(documentHtmlContent *string) error {
+func (d *Document) release(documentHtmlContent *string, page *Page) error {
 	// 通过对象构造body数据,返回reader
-	payload, err := d.constructReleaseBody(documentHtmlContent)
+	payload, err := d.constructReleaseBody(documentHtmlContent, page)
 	if err != nil {
 		d.Logger.Error("Error construct release body", zap.Error(err))
 		return err
@@ -240,22 +241,17 @@ func (d *Document) release(documentHtmlContent *string) error {
 		resp.Body.Close()
 
 		// 发布confluence文档后，从confluence返回的响应body中，获取页面的pageId
-		d.PageId = gjson.Get(string(body), "id").String()
-		if d.PageId == "" {
-			msg := "error release response: page id is empty"
-			err := errors.New(msg)
-			d.Logger.Error(msg, zap.Error(err))
-			return err
-		}
+		pageId := gjson.Get(string(body), "id").String()
+		d.PageIds = append(d.PageIds, pageId)
 
 		// 创建页面标签
-		err = d.createPageLabel()
+		err = d.createPageLabel(page)
 		if err != nil {
 			d.Logger.Error("Error create page label", zap.Error(err))
 			return err
 		}
 
-		d.Logger.Info("Release document success", zap.String("Respone confluence pageId", d.PageId))
+		d.Logger.Info("Release document success", zap.String("Respone confluence pageId", pageId))
 		break
 	}
 	if !done {
@@ -266,7 +262,7 @@ func (d *Document) release(documentHtmlContent *string) error {
 }
 
 // 创建页面page的label
-func (d *Document) createPageLabel() error {
+func (d *Document) createPageLabel(page *Page) error {
 	/*
 		构造pageLabel请求体
 		[{"prefix":"global","name":"kb-troub"},{"prefix":"global","name":"test"}]
@@ -290,7 +286,7 @@ func (d *Document) createPageLabel() error {
 
 	// 准备请求content label接口
 	// 接口示例 https: //confluence.alauda.cn/rest/api/content/214860307/label
-	url := d.Config.ConfluenceUrl + "/rest/api/content/" + d.PageId + "/label"
+	url := d.Config.ConfluenceUrl + "/rest/api/content/" + page.PageId + "/label"
 	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
 		d.Logger.Error("Error create page label new request", zap.Error(err))
@@ -321,6 +317,47 @@ func (d *Document) createPageLabel() error {
 	return nil
 }
 
+func (d *Document) aiDocumentOrganization() error {
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"model": "deepseek-chat",
+		"messages": []map[string]string{
+			{
+				"role":    "system",
+				"content": d.Config.AISpec.AIDirectives,
+			},
+			{
+				"role":    "user",
+				"content": fmt.Sprintf("工单标题：%s,工单回复内容：%s", d.Subject, d.Content),
+			},
+		},
+	})
+
+	req, _ := http.NewRequest("POST", d.Config.AISpec.Url, bytes.NewBuffer(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+d.Config.AISpec.Token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		d.Logger.Error("Error ai respone", zap.Error(err))
+		return err
+	}
+	defer resp.Body.Close()
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	json.NewDecoder(resp.Body).Decode(&result)
+	s := strings.Split(result.Choices[0].Message.Content, "---+++===")
+	d.AIContent_zh = s[0]
+	d.Subject_en = s[1]
+	d.AIContent_en = s[2]
+	return nil
+}
+
 // 并发下载与上传img
 func parallelIMGProcess(d *Document) {
 	num := len(d.ImgChan)
@@ -332,11 +369,11 @@ func parallelIMGProcess(d *Document) {
 				this.Download(d.HttpClient, done)
 			}()
 			go func() {
-				this.Upload(d.Config.ConfluenceUrl, d.PageId, d.ReleaserToken, d.HttpClient, d.Config.RetryCount, done)
+				this.Upload(d.Config.ConfluenceUrl, d.PageIds, d.ReleaserToken, d.HttpClient, d.Config.RetryCount, done)
 			}()
 		}
 	} else {
-		d.Logger.Info("No exisit img", zap.String("PageId", d.PageId))
+		d.Logger.Info("No exisit img", zap.String("", ""))
 	}
 }
 
@@ -347,7 +384,7 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 		Logger: logger,
 		Config: &config.ReleaseConfluenceDocument,
 		HttpClient: &http.Client{
-			Timeout: time.Duration(config.ReleaseConfluenceDocument.ConfluenceSpec.Timeout) * time.Second,
+			Timeout: time.Duration(config.ReleaseConfluenceDocument.Confluence.Timeout) * time.Second,
 		},
 	}
 
@@ -371,6 +408,10 @@ func newDocument(r *http.Request, config *config.Config, logger *zap.Logger) (*D
 	return d, nil
 }
 
+func newPage(language string, pageId string) *Page {
+	return &Page{Language: language, PageId: pageId}
+}
+
 // 发布confluence文档入口
 func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *config.Config, logger *zap.Logger) {
 	defer r.Body.Close()
@@ -389,17 +430,36 @@ func ReleaseConfluenceDocument(w http.ResponseWriter, r *http.Request, config *c
 
 	d.adorn()
 
-	documentAfterRender, err := d.render()
+	err = d.aiDocumentOrganization()
 	if err != nil {
 		logger.Error("", zap.Error(err))
-		http.Error(w, "Error render document", http.StatusBadRequest)
+		http.Error(w, "Error ai document organization", http.StatusBadRequest)
 		return
 	}
 
-	err = d.release(documentAfterRender)
+	zhDocumentAfterRender, err := d.render(d.Config.GoTemplatePath.Zh)
 	if err != nil {
 		logger.Error("", zap.Error(err))
-		http.Error(w, "Error release document", http.StatusBadRequest)
+		http.Error(w, "Error render zh document", http.StatusBadRequest)
+		return
+	}
+	enDocumentAfterRender, err := d.render(d.Config.GoTemplatePath.En)
+	if err != nil {
+		logger.Error("", zap.Error(err))
+		http.Error(w, "Error render en document", http.StatusBadRequest)
+		return
+	}
+
+	err = d.release(zhDocumentAfterRender, newPage("zh", d.Config.ReleasePageId.Zh))
+	if err != nil {
+		logger.Error("", zap.Error(err))
+		http.Error(w, "Error release zh document", http.StatusBadRequest)
+		return
+	}
+	err = d.release(enDocumentAfterRender, newPage("en", d.Config.ReleasePageId.En))
+	if err != nil {
+		logger.Error("", zap.Error(err))
+		http.Error(w, "Error release en document", http.StatusBadRequest)
 		return
 	}
 
