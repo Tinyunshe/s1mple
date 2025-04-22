@@ -1,2 +1,3 @@
 .DS_Store
 ./test_client
+./img_tmp_dir
